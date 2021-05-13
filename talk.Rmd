@@ -1,0 +1,154 @@
+---
+title: "Text notes for Reviewing packages; how does it work?"
+author: "Lluís Revilla Sancho"
+date: "5/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Story
+
+## Introduction
+
+Anecdote experience, my first submission got approved in 2 days: \
+Advisor: Fast submission \
+Me: I've been preparing for a while for it (Internally: is this fast?
+)
+
+Share some insights I gathered on the process
+
+## Sources
+
+Bioconductor, rOpenSci, CRAN (Thanks Locke and Maëlle)
+
+Blog,
+
+## When to submit?
+
+Sharing something of **quality** that can be useful to others.
+
+Make it easier for others to build upon your package (CRAN and Biocondutor restrictions).
+
+## Who?
+
+Most authors submitted one package on the time recorded:
+
+Success rate \~40% at first submission on Bioconductor, CRAN (not easy to know), rOpenSci pre-submissions, submissions ?
+
+## What?
+
+Bioc: repo, rOpenSci: repo, CRAN: .tar.gz file
+
+Might change: Read policies
+
+## How?
+
+### Automatic checks
+
+First automated checks BiocCheck; R CMD check --as-cran, travis/Github Actions/...
+
+OS
+
+### Human review
+
+Bioc and rOpenSci: Open review on github (people can chime in) \
+CRAN: by email
+
+### Reviewers/editors
+
+CRAN: \<5, Bioconductor: \~10, rOpenSci: \~ 10 editors
+
+rOS reviewers are taken from a list of volunteers (2 minimum)
+
+## Review process
+
+CRAN: Point errors, comments\
+Bioconductor: In detail comment of style, code classes, structure...\
+rOpenSci: guideline for reviewer
+s
+
+### Interactivity
+
+Comments by reviewers/authors
+
+More frequent errors from Bioconductor
+
+### Timeline
+
+How long on each step.
+
+rOS: longest time assignment to reply to reviewers 25d\
+Total: 64d (Coronavirus pause)
+
+Closing is not the end:comments, reopening new issue/resubmission
+
+## When for repository?
+
+CRAN: Different burden on CRAN reviewers\
+Bioc: freeze before release cycle\
+rOpenSci: alway
+s
+
+## When for you?
+
+Reasonable efforts
+
+Polices
+
+Style
+
+`devtools::use_release_issue()`
+
+## Keep up
+
+Changes on policies\
+CRAN: Read each time\
+Bioconductor and rOpenSci only for new submission
+s
+
+## Keep it up
+
+Keep: Pass automatic checks
+
+Remove: \
+[CRAN](https://cran.r-project.org/web/packages/policies.html): Archived when an ERROR in a new x.y.0 version.
+\
+[Bioc](https://bioconductor.org/developers/package-end-of-life/): requests to remove or fix before next release\
+[rOpenSci:](https://devguide.ropensci.org/curationpolicy.html?#archivalguidance) On a biannual or annual basis, rOpenSci will review all packages that have been failing for over a month to determine whether to transfer them to the ["ropensci-archive" GitHub organization](https://github.com/ropensci-archive).
+
+## Closing
+
+Hope that submitting will be easier/less scary
+
+[top of the mountain view?]
+
+# Material?
+
+Backstory: frodo and the ring?
+
+-   Aging: Code ages
+
+-   Review decision: Gandalf rejecting the ring
+
+-   Company of the ring: usethis, devtools
+
+-   Observing and deciding what to do with the package: Elrond council
+
+-   Help ents...: Rladies, support sites, mailing lists...
+
+-   Elf cloak: Hide bugs/tests
+
+# Resources
+
+-   [Template and tips for the slides](https://gitlab.com/rconf/user-xaringan-theme).
+-   Use `fig.alt` to provide alternative text to images and plots on the slides.
+-   [Article about how to create great alt-text](https://www.techsmith.com/blog/how-to-create-alternative-text-for-images-for-accessibility-and-seo/).
+
+# References
+
+-   [Tweet about resubmission](https://twitter.com/MikeMahoney218/status/1392094478681485312)
+-   [Submitting your fist package to CRAN](https://rmhogervorst.nl/cleancode/blog/2016/07/09/content/post/2016-07-09-submtting-to-cran-first-experience/)
+-   [Getting your R package on CRAN](https://kbroman.org/pkg_primer/pages/cran.html)
