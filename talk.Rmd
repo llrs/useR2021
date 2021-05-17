@@ -24,7 +24,15 @@ Share some insights I gathered on the process
 
 Bioconductor, rOpenSci, CRAN (Thanks Locke and Maëlle)
 
-Blog,
+Thanks CRAN reviewers and all the reviewers of rOpenSci.
+
+Talk based on the blog
+
+## Who?
+
+Most authors submitted one package on the time recorded:
+
+Success rate \~40% at first submission on Bioconductor, CRAN (not easy to know), rOpenSci pre-submissions, submissions?
 
 ## When to submit?
 
@@ -32,43 +40,45 @@ Sharing something of **quality** that can be useful to others.
 
 Make it easier for others to build upon your package (CRAN and Biocondutor restrictions).
 
-## Who?
-
-Most authors submitted one package on the time recorded:
-
-Success rate \~40% at first submission on Bioconductor, CRAN (not easy to know), rOpenSci pre-submissions, submissions ?
+Restricted time (CRAN holidays, maintenance), or delayed Bioconductor release.
 
 ## What?
 
-Bioc: repo, rOpenSci: repo, CRAN: .tar.gz file
-
-Might change: Read policies
+Bioc: repo, rOpenSci: repo, CRAN: .tar.gz file (R CMD build)
 
 ## How?
 
+### Setup
+
+CRAN: submission validation, comment submission (changes, tested platforms...)
+
+Bioconductor: clone from a github repo (ssh keys), bioc-devel mailing list..
+
+rOpenSci: Github repo, submission template
+
 ### Automatic checks
 
-First automated checks BiocCheck; R CMD check --as-cran, travis/Github Actions/...
+First automated checks BiocCheck; R CMD check --as-cran, travis/Github Actions/R-hub...
 
-OS
+OS (Unix, Windows, iOs)
 
 ### Human review
 
 Bioc and rOpenSci: Open review on github (people can chime in) \
-CRAN: by email
+CRAN: by email (and ftps site)
 
 ### Reviewers/editors
 
 CRAN: \<5, Bioconductor: \~10, rOpenSci: \~ 10 editors
 
-rOS reviewers are taken from a list of volunteers (2 minimum)
+rOS reviewers are taken from a list of volunteers (2 minimum).
 
 ## Review process
 
 CRAN: Point errors, comments\
-Bioconductor: In detail comment of style, code classes, structure...\
-rOpenSci: guideline for reviewer
-s
+Bioconductor: In detail comment of style, classes, dependencies, structure...\
+rOpenSci: guideline for reviewers (about style, tests, functions, description, documentation, ...
+)
 
 ### Interactivity
 
@@ -83,7 +93,7 @@ How long on each step.
 rOS: longest time assignment to reply to reviewers 25d\
 Total: 64d (Coronavirus pause)
 
-Closing is not the end:comments, reopening new issue/resubmission
+Closing is not the end: comments, reopening new issue/resubmission
 
 ## When for repository?
 
@@ -109,14 +119,13 @@ CRAN: Read each time\
 Bioconductor and rOpenSci only for new submission
 s
 
-## Keep it up
-
 Keep: Pass automatic checks
 
-Remove: \
-[CRAN](https://cran.r-project.org/web/packages/policies.html): Archived when an ERROR in a new x.y.0 version.
+## Remove
+
+[CRAN](https://cran.r-project.org/web/packages/policies.html): Archived when an ERROR in a new x.y.0 version, without notice \
+[Bioc](https://bioconductor.org/developers/package-end-of-life/): requests to remove or fix before next release.
 \
-[Bioc](https://bioconductor.org/developers/package-end-of-life/): requests to remove or fix before next release\
 [rOpenSci:](https://devguide.ropensci.org/curationpolicy.html?#archivalguidance) On a biannual or annual basis, rOpenSci will review all packages that have been failing for over a month to determine whether to transfer them to the ["ropensci-archive" GitHub organization](https://github.com/ropensci-archive).
 
 ## Closing
