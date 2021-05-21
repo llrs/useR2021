@@ -80,6 +80,7 @@ scale_data <- scale_x_datetime(
   limits = as.POSIXct(c("2016-06-01", "2021-06-20"), "%Y-%m-%d"))
 theme_set(theme_minimal())
 col_bioc <- scale_color_gradient(low = "#87b13f", high = "#1a81c2")
+fill_bioc <- scale_fill_gradient(low = "#87b13f", high = "#1a81c2")
 
 
 get_element <- function(x, name) {
@@ -207,16 +208,17 @@ ggplot(usr_success) +
 usr_diff_pkg2 <- rename(usr_diff_pkg, diff_pkg = n)
 
 usr_submission_pkg <- full %>% 
+  filter(event == "created") %>% 
   filter(Approved %in% c("Yes", "No")) %>% 
-  unnest(package) %>% 
-  filter(package != "yourpackagename") %>% 
-  group_by(user) %>% 
+  unnest(repos) %>% 
+  filter(pkg != "yourpackagename") %>% 
+  group_by(actor) %>% 
   arrange(id) %>% 
   mutate(n = n(),
          user_submission = 1:n()) %>% 
   filter(n != 1) %>% 
   ungroup() %>% 
-  select(user, user_submission, created, package, Approved)
+  select(actor, user_submission, created, pkg, Approved)
 
 usr_submission_pkg %>% 
   group_by(user_submission, Approved) %>% 
@@ -226,14 +228,15 @@ usr_submission_pkg %>%
   mutate(ratio = n/sum(n)) %>% 
   ungroup() %>% 
   filter(Approved == "Yes") %>% 
-  select(user_submission, ratio) %>% 
+  select(user_submission, ratio, n) %>% 
   ggplot() + 
-  geom_path(aes(user_submission, ratio, col = ratio)) +
+  geom_path(aes(user_submission, ratio, size = n, col = ratio)) +
+  geom_point(aes(user_submission, ratio, size = n-5, col = ratio), show.legend = FALSE) +
   col_bioc +
-  scale_x_continuous(breaks = 1:15) +
+  scale_x_continuous(breaks = 1:20) +
   scale_y_continuous(limits = c(0, 1))  +
   labs(title = "User submissions", y = "Approval ratio", 
-       x = "Number of submission") +
+       x = "Number of submission", size = "Users") +
   guides(col = FALSE) + 
   theme(panel.grid.minor.x = element_blank())
 
@@ -241,7 +244,7 @@ usr_submission_pkg %>%
 
 ## ----user_submission_progression------------------------------------------------------------------
 usr_submission_pkg %>% 
-  group_by(user) %>% 
+  group_by(actor) %>% 
   mutate(max_submissions = max(user_submission)) %>% 
   group_by(user_submission, max_submissions) %>% 
   count(Approved) %>% 
@@ -253,8 +256,8 @@ usr_submission_pkg %>%
   scale_colour_binned(low = "#87b13f", high = "#1a81c2", 
                       guide = guide_bins(show.limits = TRUE)) +
   scale_size_binned(guide = guide_bins(show.limits = TRUE)) +
-  scale_x_continuous(breaks = 1:15) +
-  scale_y_continuous(breaks = 1:15) +
+  scale_x_continuous(breaks = 1:30) +
+  scale_y_continuous(breaks = 1:30) +
   theme(panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank()) +
   labs(title = "User submissions", y = "Submission", 
@@ -263,35 +266,39 @@ usr_submission_pkg %>%
 
 
 ## ----submissions----------------------------------------------------------------------------------
-df %>% 
+full %>% 
+  filter(event == "created") %>% 
   group_by(year = year(created)) %>% 
-  summarise(n = n(), ratio = sum(approved)/n) %>% 
+  summarise(n = sum(Approved %in% c("Yes", "No")), 
+            ratio = sum(Approved == "Yes")/n) %>%
   ungroup() %>% 
   ggplot() +
   geom_col(aes(year, n, fill = ratio)) + 
   labs(title = "Yearly submissions and approval", 
        y = "Issues", x = element_blank(), 
        fill = "Approval ratio") +
-  scale_fill_continuous(low = "#87b13f", high = "#1a81c2", limits = c(0, 1))
+  scale_fill_continuous(low = "#87b13f", high = "#1a81c2", limits = c(NA, 1))
 
 
 ## ----reviewers, include=FALSE---------------------------------------------------------------------
-df %>% 
-  group_by(n_reviewers) %>% 
+full %>% 
+  filter(Approved != "Ongoing",
+         !is.na(reviewer)) %>% 
+  group_by(reviewer) %>% 
   count(Approved) %>% 
   ungroup() %>% 
   mutate(ratio = n/sum(n)) %>% 
-  arrange(-ratio, n)
+  arrange(-ratio, n) %>% 
+  filter(n > 10) %>% 
+  pivot_wider(id_cols = c("reviewer"),
+              values_from = c(n, ratio),
+              names_from = "Approved",
+              values_fill = 0)
 
-df %>% 
-  filter(n_reviewers == 0) %>% 
-  group_by(time_opened) %>% 
-  count(Approved) %>% 
+full %>%
+  group_by(id) %>% 
+  mutate(n_reviewers = sum(!is.na(reviewer))) %>% 
   ungroup() %>% 
-  mutate(ratio = n/sum(n)) %>% 
-  arrange(-ratio)
-
-df %>% 
   group_by(n_reviewers) %>% 
   count(Approved) %>% 
   ungroup() %>% 
@@ -301,45 +308,64 @@ df %>%
   summarise(fr = sum(ratio))
 
 
+unique_na <- function(x) {
+  y <- unique(x)
+  y[!is.na(y)]
+}
 ## ----reviewers_frequency--------------------------------------------------------------------------
-normal_reviews <- df %>% 
+normal_reviews <- full %>% 
+  group_by(id) %>% 
+  summarize(n_reviewers = sum(!is.na(reviewer)),
+         n_labels = sum(event == "labeled") - sum(event == "unlabeled"),
+         n_comments = sum(event == "commented") - sum(event == "comment_deleted"),
+         closed = any(event == "closed"),
+         time_opened = time_relative[which.max(event == "closed")],
+         reviewer = list(unique_na(reviewer))) %>% 
+  ungroup() %>% 
   filter(n_reviewers == 1, n_labels >= 1, n_comments > 1,
          !is.na(closed)) %>% 
-  mutate(Reviewer = unlist(assignee))
+  select(-n_reviewers) %>% 
+  mutate(reviewer = unlist(reviewer))
+normal_reviews <- normal_reviews %>% 
+  left_join(full[full$event == "created", ], by = "id") %>% 
+  select(-reviewer.y) %>% 
+  rename(reviewer = reviewer.x)
 
 top_reviewers <- normal_reviews %>% 
-  count(Reviewer, sort = TRUE) %>% 
-  top_n(9, wt = n) %>% 
-  pull(Reviewer)
+  count(reviewer, sort = TRUE) %>% 
+  filter(reviewer > 50) %>% 
+  pull(reviewer)
 
 normal_reviews %>% 
   mutate(year = year(created)) %>% 
   group_by(year) %>% 
-  count(Reviewer) %>% 
+  count(reviewer) %>% 
   mutate(share = n/sum(n),
-         Reviewer = fct_reorder2(Reviewer, year, n)) %>% 
+         reviewer = fct_reorder2(reviewer, year, n)) %>% 
   ungroup() %>% 
   ggplot() +
-  geom_line(aes(year, share, col = Reviewer)) +
+  geom_line(aes(year, share, col = reviewer)) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = element_blank(), y = element_blank(),
        title = "Share of issues reviewed")
 
 
 ## ----reviewer_comments----------------------------------------------------------------------------
-normal_reviews %>% 
-  group_by(Reviewer) %>% 
+approval_reviewers <- normal_reviews %>% 
+  group_by(reviewer) %>% 
   count(Approved) %>% 
   mutate(ratio = n/sum(n), total = sum(n),
-         Reviewer = fct_reorder(Reviewer, ratio)) %>% 
+         Reviewer = fct_reorder(reviewer, ratio)) %>% 
   ungroup() %>% 
-  filter(Approved == "Yes", total  > 50) %>% 
+  filter(Approved == "Yes", total  > 50)
+
+approval_reviewers %>% 
   ggplot() +
-  geom_point(aes(total, ratio, col = Reviewer)) + 
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1), 
-                     expand = expansion(mult = 0, add = 0)) +
+  geom_point(aes(total, ratio, col = reviewer), size = 3) + 
+  geom_hline(yintercept = median(approval_reviewers$ratio), linetype = "dashed") +
+  scale_y_continuous(labels = scales::percent) +
   labs(x = "Issues handled", y = "Approval ratio",
-       title = "Reviewers approval Ratio")
+       title = "Reviewers approval Ratio", col = "Reviewer")
 
 
 ## ----reviewers_time-------------------------------------------------------------------------------
@@ -348,21 +374,22 @@ breaks <- function(limits) {
 }
 
 normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
   ggplot() +
-  ggbeeswarm::geom_quasirandom(aes(Reviewer, time_opened, 
+  ggbeeswarm::geom_quasirandom(aes(reviewer, time_opened, 
                                    col = Approved, shape = Approved), 
                                size = 0.75) +
-  
   labs(y = "Days open", title = "Time open by reviewers")
 
 # Focusing a bit
 
 normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
   ggplot() +
-  ggbeeswarm::geom_quasirandom(aes(Reviewer, time_opened, 
+  ggbeeswarm::geom_quasirandom(aes(reviewer, time_opened, 
                                    col = Approved, shape = Approved)) +
+  geom_hline(yintercept = median(normal_reviews$time_opened), 
+             linetype = "dashed") +
   coord_cartesian(ylim = c(0, 150)) +
   scale_y_continuous(expand = expansion(mult = 0, add = 0)) +
   labs(y = "Days open", title = "Time open by reviewers", 
@@ -371,41 +398,43 @@ normal_reviews %>%
 
 ## ----reviewer_time_diff---------------------------------------------------------------------------
 reviewer_time <- normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
-  group_by(Reviewer) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
+  group_by(reviewer) %>% 
   summarise(m = median(time_opened), me = mean(time_opened), n = n()) %>% 
   ungroup() %>% 
   arrange(m)
 
 global_medians_time <- normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
   group_by(Approved) %>% 
-  summarise(m = median(time_opened), me = mean(time_opened), n = n())
+  summarise(m = median(time_opened), me = mean(time_opened), n = n()) %>% 
+  filter(Approved != "Ongoing")
 
 reviewers_time_approved <- normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
-  group_by(Reviewer, Approved) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
+  group_by(reviewer, Approved) %>% 
   summarise(m = median(time_opened), 
             me = mean(time_opened), 
             s = sd(time_opened),
             n = n(),
             sem = sqrt(pi/2)*s/sqrt(n)) %>% # https://stats.stackexchange.com/q/59838/105234
   ungroup() %>% 
-  mutate(Reviewer = fct_relevel(Reviewer, reviewer_time$Reviewer))
+  mutate(reviewer = fct_relevel(reviewer, reviewer_time$reviewer)) %>% 
+  filter(Approved != "Ongoing")
 
 reviewers_time_approved %>% 
   ggplot() +
   geom_hline(data = global_medians_time, 
              aes(yintercept = m, col = Approved), linetype = "dotted") +
-  geom_point(data = reviewer_time, aes(fct_relevel(Reviewer, Reviewer), 
+  geom_point(data = reviewer_time, aes(fct_relevel(reviewer, reviewer), 
                                        m, size = n)) +
-  geom_point(aes(Reviewer, m, col = Approved, shape = Approved, size = n)) +
-  geom_errorbar(aes(x = Reviewer, ymin = m-sem, ymax = m+sem, col = Approved), width = 0.2) +
+  geom_point(aes(reviewer, m, col = Approved, group = Approved, shape = Approved, size = n)) +
+  geom_errorbar(aes(x = reviewer, group = Approved, ymin = m-sem, ymax = m+sem, col = Approved), width = 0.2) +
   labs(x = element_blank(), y = "Days (median)", 
        title = "Reviewers speed to close", 
        subtitle = "In black all reviews together. Errorbars are the standard error of the median",
        size = "Reviews") +
-  scale_y_continuous(limits = c(0, 130), expand = expansion(add = c(1, 0)), 
+  scale_y_continuous(limits = c(0, NA), expand = expansion(add = c(1, 0)), 
                      breaks = seq(from = 0, to = 130, by = 20)) +
   scale_shape_manual(values = c(15, 17)) +
   scale_x_discrete(expand = expansion(add = 0.1))
@@ -413,9 +442,9 @@ reviewers_time_approved %>%
 
 ## ----reviewers_comments---------------------------------------------------------------------------
 normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
   ggplot() +
-  ggbeeswarm::geom_quasirandom(aes(Reviewer, n_comments, 
+  ggbeeswarm::geom_quasirandom(aes(reviewer, n_comments, 
                                    col = Approved, shape = Approved), 
                                size = 0.75) +
   
@@ -424,34 +453,38 @@ normal_reviews %>%
 
 ## ----reviewer_comment_diff------------------------------------------------------------------------
 reviewer_comments <- normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
-  group_by(Reviewer) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
+  group_by(reviewer) %>% 
   summarise(m = median(n_comments), me = mean(n_comments), n = n()) %>% 
   ungroup() %>% 
   arrange(m)
 
 global_medians_comments <- normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
   group_by(Approved) %>% 
-  summarise(m = median(n_comments), me = mean(n_comments), n = n())
+  summarise(m = median(n_comments), me = mean(n_comments), n = n()) %>% 
+  filter(Approved != "Ongoing")
+
 reviewers_comment_approved <- normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
-  group_by(Reviewer, Approved) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
+  group_by(reviewer, Approved) %>% 
   summarise(m = median(n_comments), 
             me = mean(n_comments), 
             s = sd(n_comments),
             n = n(),
             sem = sqrt(pi/2)*s/sqrt(n)) %>% 
   ungroup() %>% 
-  mutate(Reviewer = fct_relevel(Reviewer, reviewer_comments$Reviewer))
+  mutate(reviewer = fct_relevel(reviewer, reviewer_comments$reviewer)) %>% 
+  filter(Approved != "Ongoing")
+
 reviewers_comment_approved %>% 
   ggplot() +
   geom_hline(data = global_medians_comments, 
              aes(yintercept = m, col = Approved), linetype = "dotted") +
-  geom_point(data = reviewer_comments, aes(fct_relevel(Reviewer, Reviewer), 
+  geom_point(data = reviewer_comments, aes(fct_relevel(reviewer, reviewer), 
                                            m, size = n)) +
-  geom_point(aes(Reviewer, m, col = Approved, fill = Approved, shape = Approved, size = n)) +
-  geom_errorbar(aes(x = Reviewer, ymin = m-sem, ymax = m+sem, col = Approved), width = 0.2) +
+  geom_point(aes(reviewer, m, col = Approved, fill = Approved, shape = Approved, size = n)) +
+  geom_errorbar(aes(x = reviewer, ymin = m-sem, ymax = m+sem, col = Approved), width = 0.2) +
   labs(x = element_blank(), y = "Comments (median)", 
        title = "Comments on the issues", 
        subtitle = "In black all reviews together. Errorbars indicate standard error of the median. ",
@@ -478,86 +511,55 @@ normal_reviews %>%
 
 ## ----reviewers_comments_time----------------------------------------------------------------------
 normal_reviews %>% 
-  filter(Reviewer  %in% top_reviewers) %>% 
+  filter(reviewer  %in% top_reviewers) %>% 
   ggplot() +
   geom_point(aes(time_opened, n_comments, col = Approved, shape = Approved), 
              size = 0.75) +
   scale_x_continuous(breaks = breaks, guide = guide_axis(check.overlap = TRUE)) +
   scale_y_continuous(breaks = breaks) +
-  facet_wrap(~Reviewer, scales = "free") +
+  facet_wrap(~reviewer, scales = "free") +
   labs(x = "Days opened", y = "Comments", 
        title = "Comments and open days per reviewer")
 
 
-## ----mix_reviews, eval=FALSE, include=FALSE-------------------------------------------------------
-## mix_reviews <- reviewers_time_approved %>%
-##   rename(median_time = m, sem_time = sem, sd_time = s) %>%
-##   select(-me) %>%
-##   inner_join(reviewers_comment_approved %>% rename(median_comments = m, sem_comments = sem, sd_comments = s))
-## 
-## mix_reviews %>%
-##   group_by(Reviewer) %>%
-##   summarise(
-##     time_diff = max(median_time)-min(median_time),
-##     comments_diff = max(median_comments)-min(median_comments)) %>%
-##   arrange(time_diff, comments_diff)
-## 
-## mix_reviews %>%
-##   ggplot() +
-##   geom_point(aes(median_time, median_comments, col = Reviewer, shape = Approved, size = n)) +
-##   geom_path(aes(median_time, median_comments, col = Reviewer)) +
-##   # geom_errorbar(aes(y = median_comments,
-##   #                   xmin = median_time-sem_time,
-##   #                   xmax = median_time+sem_time, col = Reviewer), width = 1) +
-##   # geom_errorbar(aes(x = median_time,
-##   #                   ymin = median_comments-sem_comments,
-##   #                   ymax = median_comments+sem_comments, col = Reviewer), width = 1)
-##   labs(y = "Comments (median)", x = "Days (median)",
-##        title = "Reviewers differences")  +
-##   scale_x_continuous(limits = c(0, 90), expand = expansion(add = c(1, 0)),
-##                      breaks = seq(from = 0, to = 130, by = 20)) +
-##   scale_y_continuous(limits = c(1, 50))
-
 
 ## ----submission_rate------------------------------------------------------------------------------
-df %>% 
+full %>% 
+  filter(event == "created") %>% 
   mutate(md  = as.numeric(format(created, "%j")),
          year = year(created)) %>% 
   group_by(md) %>% 
   summarise(n = median(n())) %>% 
   ungroup() %>% 
   ggplot() + 
+  geom_vline(xintercept = as.numeric(format(releases$date, "%j")), alpha = 0.5,
+             linetype = "dashed") +
   geom_point(aes(md, n), col = "#1a81c2") + 
+  geom_smooth(aes(md, n), span = 0.25, col = "#87b13f") +
   labs(title = "Median daily submissions", 
        x = "Day of year", y = "Issues opened") +
-  scale_x_continuous(expand = expansion(add = 5))
+  scale_x_continuous(expand = expansion(add = 2)) +
+  scale_y_continuous(expand = expansion(add = 1))
 
 
 ## ----margin_submission----------------------------------------------------------------------------
 release_attempt <- function(x, release = releases) {
-  diff_time <- x - release$date
+  diff_time <- difftime(x, release$date, units = "days")
   pre_release <- diff_time < 0
   pick <- which(diff_time[pre_release] == max(diff_time[pre_release]))
   data.frame("release" = release$release[pre_release][pick], 
              "margin" = abs(diff_time[pre_release][pick]), stringsAsFactors = FALSE)
 }
 
-ra <- lapply(df$created, release_attempt)
-r <- lapply(ra, function(x){x$release})
-r[lengths(r) == 0] <- NA
-r <- unlist(r, FALSE, FALSE)
-m <- lapply(ra, function(x){x$margin})
-m[lengths(m) == 0] <- NA
-m <- unlist(m, FALSE, FALSE)
-m <- as.difftime(m, units = "days")
-df2 <- df %>% 
-  mutate(release = r, margin = m,
-         devel = release == "3.11" & approved & margin < 30)
+ra <- lapply(normal_reviews$created, release_attempt)
+rs <- do.call("rbind", ra)
+df2 <- normal_reviews %>% 
+  mutate(release = rs$release, margin = rs$margin,
+         devel = release == "3.14" & approved & margin < 30)
 df2 %>% 
   ggplot() +
   geom_histogram(aes(margin, fill = margin, col = margin), bins = 40) +
   geom_vline(xintercept = 30) +
-  fill_bioc +
   col_bioc +
   scale_y_continuous(expand = expansion(add = c(0, 5))) +
   scale_x_continuous(expand = expansion())  + 
@@ -587,7 +589,7 @@ df2 %>%
   filter(!(time_opened == 0 & !approved)) %>% 
   ggplot() +
   geom_vline(xintercept = 30) +
-  geom_hline(yintercept = latest_submission*c(1:4), col = "darkgrey") +
+  geom_hline(yintercept = latest_submission*c(1:2), col = "darkgrey") +
   geom_point(aes(margin, time_opened, col = Approved, shape = Approved)) +
   geom_point(data = ~filter(.x, devel), aes(margin, time_opened), col = "grey") +
   ggplot2::annotate(geom = "rect", xmin = 0, ymin = latest_submission,
@@ -596,11 +598,11 @@ df2 %>%
   ggplot2::annotate(geom = "rect", xmin = 0, ymin = 0,
                     xmax = 30, ymax = max(df2$time_opened) + 10, 
                     fill = "red", alpha = 0.25) +
-  ggplot2::annotate(geom = "text", x = 100, y = 540, 
+  ggplot2::annotate(geom = "text", x = 50, y = 180, 
                     label = "Missed release") +
-  ggplot2::annotate(geom = "text", x = 13, y = 700, 
+  ggplot2::annotate(geom = "text", x = 13, y = 250, 
                     label = "Submitted right before a release", 
-                    angle = 90, hjust = 1, vjust = 1) +
+                    angle = 90, hjust = 0, vjust = 1) +
   scale_x_continuous(expand = expansion(add = 1)) +
   scale_y_continuous(expand = expansion(add = 9)) +
   scale_color_discrete(na.value = "grey") +
@@ -615,7 +617,7 @@ df2 %>%
   geom_point(aes(created, time_opened, col = Approved, shape = Approved)) +
   geom_vline(data = releases, aes(xintercept = date), alpha = 0.5, 
              col = "darkgreen") + # Release dates
-  geom_text(data = releases, aes(x = date, y = rep(600, 10),
+  geom_text(data = releases, aes(x = date, y = rep(300, 11),
                                  label = release), col = "#1a81c2") + # Release dates
   scale_y_continuous(expand = expansion(add = 6)) +
   scale_data +
@@ -625,9 +627,10 @@ df2 %>%
 
 ## ----pkg_source-----------------------------------------------------------------------------------
 df2 %>% 
-  filter(Approved != "Ongoing",
-         n_packages == 1) %>% 
-  group_by(same_submitter = ifelse(pkg_repo != user, "No", "Yes")) %>% 
+  mutate(repos = lapply(repos, function(x){if(length(x) != 1){x[1, ]}})) %>% 
+  unnest(repos) %>% 
+  group_by(same_submitter = ifelse(org != actor, "No", "Yes"))  %>% 
+  filter(!is.na(same_submitter)) %>% 
   count(Approved) %>% 
   mutate(ratio = n/sum(n), total = sum(n), pos = paste0(n, collapse = "/")) %>% 
   ggplot() +
@@ -643,7 +646,7 @@ df2 %>%
   filter(Approved == "No") %>% 
   ggplot() + 
   geom_histogram(aes(time_opened), bins = 50) +
-  fill_bioc +
+  # fill_bioc +
   labs(x = "Days open", y = "Issues", 
        title = "Most not approved packages are closed the same day") 
 
@@ -651,18 +654,12 @@ df2 %>%
 ## ----repolink-------------------------------------------------------------------------------------
 rejected <- df2 %>% 
   filter(Approved == "No")
-rejected %>% 
-  count(n_packages) %>% 
-  filter(n_packages != 1) %>% 
-  knitr::kable(col.names = c("Number of packages", "Times"), 
-               caption = "Issues with more than one package",
-               align = "c")
-
 
 ## ----repolinks------------------------------------------------------------------------------------
 rejected %>%
-  filter(n_packages == 1) %>% 
-  count(package, sort = TRUE) %>% 
+  mutate(repos = lapply(repos, function(x){if(length(x) != 1){x[1, ]}})) %>% 
+  unnest(repos) %>% 
+  count(pkg, sort = TRUE) %>% 
   head() %>% 
   knitr::kable(col.names = c("Name", "Packages"), 
                caption = "Multiple submission for the same package",
@@ -678,19 +675,6 @@ rejected %>%
                align = "c")
 
 
-## ----ending---------------------------------------------------------------------------------------
-rejected %>% 
-  filter(n_packages == 1) %>% 
-  mutate(ending = str_extract(package, "\\..+$")) %>% 
-  select(id, repos, package, ending) %>% 
-  filter(!is.na(ending)) %>% 
-  count(ending, sort = TRUE) %>% 
-  head() %>% 
-  knitr::kable(col.names = c("Ending", "Number of issues"), 
-               caption = "Ending of rejected issues",
-               align = "c")
-
-
 ## ----labels---------------------------------------------------------------------------------------
 rejected %>% 
   count(n_labels) %>% 
@@ -698,133 +682,7 @@ rejected %>%
                caption = "Labels of rejected packages",
                align = "c")
 
-
-## ----upset----------------------------------------------------------------------------------------
-ups <- rejected %>% 
-  filter(n_labels > 1) %>% 
-  select(i, id, labels) %>% 
-  unnest(labels) %>% 
-  pivot_wider(names_from = labels, values_from = id) %>% 
-  mutate(across(where(is.numeric), function(x){!is.na(x)})) %>%
-  mutate(across(where(is.logical), as.integer))
-ups <- ups[, -1]
-ups <- as.data.frame(ups)
-colnames(ups) <- make.names(colnames(ups))
-
-upset(ups, order.by = "freq", decreasing = TRUE, 
-      nintersects = 10)
-
-
-## ----downloading, eval=FALSE----------------------------------------------------------------------
-## 
-## repo <- "Bioconductor/Contributions"
-## gi <- get_issues(repo)
-## i <- unique(gi$id)
-## # gt <- get_timelines(repo) there's a limit of 40000 so we cannot use it.
-## gt <- lapply(i, get_timelines, repository = repo)
-## gt2 <- do.call(rbind, gt)
-## theme_set(theme_minimal())
-## gi2 <- gi %>%
-##   select(-n_comments) %>%
-##   mutate(actor = poster, event = "created")
-## column <- intersect(colnames(gt2), colnames(gi2))
-## g <- rbind(gi2[, colnames(gt2)], gt2) %>%
-##   arrange(id, created) %>%
-##   group_by(id) %>%
-##   mutate(event_n = 1:n(),
-##          event = unlist(event, FALSE, FALSE),
-##          state = ifelse(event_n == 1, list("opened"), state))
-## pr <- g %>%
-##   ungroup() %>%
-##   filter(event %in% c("merged", "committed")) %>%
-##   pull(id)
-## g2 <- g %>%
-##   filter(!id %in% pr) %>%
-##   mutate(approved = any(label == "3a. accepted"),
-##          Approved = case_when(any(approved) ~ "Yes",
-##                               sum(event == "closed") >= sum(event == "reopened") ~ "No",
-##                               TRUE ~ "Ongoing"))
-## saveRDS(g2, file = "static/20200818_github_data.RDS")
-
-
-## ----reading--------------------------------------------------------------------------------------
-theme_set(theme_minimal())
-# If not closed add the closing time of today
-g2 <- readRDS(here::here("static", "20200818_github_data.RDS")) %>% 
-  mutate(
-    approved = any(str_detect(unlist(label[event %in% c("labeled", "unlabeled")]), "accept")),
-    Approved = case_when(
-      any(approved) ~ "Yes",
-      sum(event == "closed") == 0 ~ "Ongoing",
-      sum(event == "closed") >= sum(event == "reopened") ~ "No",
-      TRUE ~ "Ongoing"))
-
-
-## ----first_plot-----------------------------------------------------------------------------------
-link_issue <- function(x) {
-  socialGH::link_issue("Bioconductor/Contributions", x)
-}
-releases <- data.frame(release = paste0("3.", 3:12),
-           date = as.POSIXct(c("2016/04/04", "2016/10/18", "2017/04/25", 
-                            "2017/10/31", "2018/05/01", "2018/10/31", 
-                            "2019/05/03", "2019/10/30", "2020/04/28",
-                            "2020/10/01"), format = "%Y/%m/%d"),
-           stringsAsFactors = FALSE)
-
-scale_data <- scale_x_datetime(expand = expansion(add = 10), 
-               limits = as.POSIXct(c("2016-06-01", "2020-06-10"), "%Y-%m-%d"))
-
-cut <- 5
-g2 %>% 
-  ggplot() +
-  geom_point(aes(created, id, 
-                 col = fct_lump_n(event, cut),
-                 shape = fct_lump_n(event, cut))) + 
-  geom_vline(xintercept = releases$date, col = "#1a81c2") + # Releases dates
-  geom_text(data = releases, aes(x = date, y = c(rep(1200, 5), rep(300, 5)),
-           label = release)) + # Release dates
-  scale_data +
-  labs(x = "Events", y = "Issue", col = "Type", shape = "Type",
-       title = "Events on issues") +
-  scale_color_viridis_d() +
-  theme(legend.position = "bottom", legend.direction = "horizontal") + 
-  guides(colour = guide_legend(nrow = 1), shape = guide_legend(nrow = 1))
-
-
-## ----exclude_testing------------------------------------------------------------------------------
-g2 <- filter(g2, !id %in% c(1:5, 51, 587, 764, 1540, 1541))
-
-
-## ----summarizing----------------------------------------------------------------------------------
-get_element <- function(x, name) {
-  if (!is.null(names(x))) {
-    getElement(x, name)
-  } else {
-    NA_character_
-  }
-} 
-trelative <- function(x) {
-  created <- x$created
-  event <- x$event
-  start <- created[event == "created"]
-  k <- event == "closed"
-  if (any(k)){
-    closing <- created[which.max(k)]
-  } else {
-    closing <- max(created)
-  }
-  
-  o <- difftime(created[!is.na(created)], start, units = "days")
-  as.numeric(o)
-}
-g2 <- g2 %>% 
-  mutate(reviewer = vapply(assignee, get_element, name = "user", character(1)),
-         actor = vapply(actor, get_element, name = "user", character(1L)))
-full <- g2 %>%  
-  nest_by() %>% 
-  summarize(time_relative = trelative(data), created = data$created) %>% 
-  inner_join(g2) %>% 
-  unique()
+# --- Part 2 ###--------------------------------------
 
 
 ## ----by_issue-------------------------------------------------------------------------------------
@@ -844,7 +702,7 @@ reviewers <- function(assigners, unassigners) {
   reviewers
 }
 
-by_issue <- g2 %>% 
+by_issue <- full %>% 
   group_by(id) %>% 
   summarize(time_window = difftime(max(created), min(created), units = "days"),
             events = n(), 
@@ -877,23 +735,25 @@ by_issue <- g2 %>%
   mutate(n_reviewers = lengths(reviewers),
          n_closers = lengths(closer))
 
-by_issue1 <- g2 %>% 
+by_issue1 <- full %>% 
+  group_by(id) %>% 
   count(event) %>% 
   filter(event != "created") %>% 
-  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
+  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>%
   nest_by(.key = "event")
-by_issue2 <- g2 %>% 
+by_issue2 <- full %>% 
+  group_by(id) %>% 
   count(actor) %>% 
   pivot_wider(values_from = n, names_from = actor, values_fill = 0) %>% 
   nest_by(.key = "actor")
 
 by_issue <- by_issue %>% 
-  inner_join(by_issue1) %>% 
-  inner_join(by_issue2)
+  inner_join(by_issue1, by = "id") %>% 
+  inner_join(by_issue2, by = "id")
 
 
 ## ----by_user--------------------------------------------------------------------------------------
-by_user <- g2 %>%
+by_user0 <- full %>%
   group_by(actor) %>% 
   summarize(
     actions = n(),
@@ -903,20 +763,20 @@ by_user <- g2 %>%
   ) %>% 
   mutate(is_reviewer = actor %in% unlist(by_issue$reviewers, FALSE, FALSE))
 
-by_user1 <- g2 %>% 
+by_user1 <- full %>% 
   group_by(actor) %>% 
   count(event) %>% 
   pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
   nest_by(.key = "event")
-by_user2 <- g2 %>% 
+by_user2 <- full %>% 
   group_by(actor) %>% 
   count(id) %>% 
   pivot_wider(values_from = n, names_from = id, values_fill = 0) %>% 
   nest_by(.key = "ids")
 
-by_user <- by_user %>% 
-  inner_join(by_user1) %>% 
-  inner_join(by_user2)
+by_user <- by_user0 %>% 
+  full_join(by_user1, by = "actor") %>% 
+  full_join(by_user2, by = "actor")
 
 by_user %>% 
   filter(is_reviewer) %>%
@@ -951,18 +811,18 @@ by_user %>%
 
 
 ## ----by_event-------------------------------------------------------------------------------------
-by_event1 <- g2 %>% 
+by_event1 <- full %>% 
   group_by(event) %>% 
   count(actor) %>% 
   pivot_wider(names_from = actor, values_from = n, values_fill = 0) %>% 
   nest_by(.key = "actor")
-by_event2 <- g2 %>% 
+by_event2 <- full %>% 
   group_by(event) %>% 
   count(id) %>% 
   pivot_wider(names_from = id, values_from = n, values_fill = 0) %>% 
   nest_by(.key = "id") 
 
-by_event <- g2 %>% 
+by_event <- full %>% 
   group_by(event) %>% 
   summarize(
     n = n(),
@@ -976,7 +836,7 @@ by_event <- by_event %>%
 
 
 ## ----by_event_actor_id----------------------------------------------------------------------------
-by_actor_event_id <- g2 %>% 
+by_actor_event_id <- full %>% 
   group_by(event, actor, id) %>% 
   count()
 
@@ -998,6 +858,7 @@ by_event %>%
 
 ## ----second_plot----------------------------------------------------------------------------------
 full %>% 
+  group_by(id) %>% 
   filter(event != "created") %>% 
   count(event) %>% 
   ungroup() %>% 
@@ -1012,7 +873,7 @@ full %>%
 
 ## ----events_time----------------------------------------------------------------------------------
 unit <- "days"
-g2 %>% 
+full %>% 
   group_by(id) %>% 
   filter(event_n == max(event_n)) %>% 
   ungroup() %>% 
@@ -1023,7 +884,7 @@ g2 %>%
 
 
 ## ----events_time2---------------------------------------------------------------------------------
-diff_time <- g2 %>% 
+diff_time <- full %>% 
   group_by(id) %>% 
   summarise(open_time = difftime(max(created), min(created), units = unit),
             n = max(event_n), 
@@ -1148,32 +1009,29 @@ r <- revi_sum %>%
   nest_by(Approved, reviewer_commented) %>% 
   mutate(plot_relative = list(
     ggplot(data) +
-      geom_col(aes(reviewer, perc)) +
-      labs(title = paste(Approved, reviewer_commented), x = element_blank(), y = "Percentage") +
-      scale_y_continuous(labels = scales::percent) +
-      scale_x_discrete(drop = FALSE) +
-      scale_fill_brewer(type =  "qual") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) ),
+      geom_col(aes(perc, reviewer)) +
+      labs(title = paste(Approved, reviewer_commented, sep = " and "), 
+           y = element_blank(), x = element_blank()) +
+      scale_x_continuous(labels = scales::percent) +
+      scale_y_discrete(drop = FALSE) +
+      scale_fill_brewer(type =  "qual")),
     plot_abs = list(
     ggplot(data) +
-      geom_col(aes(reviewer, n)) +
-      labs(title = paste(Approved, reviewer_commented), x = element_blank(), y = "Issues") +
+      geom_col(aes(reviewer, n)) + 
+      coord_flip() +
+      labs(title = paste(Approved, reviewer_commented, sep = " and "), 
+           x = element_blank(),  y = element_blank()) +
       scale_x_discrete(drop = FALSE) +
-      scale_fill_brewer(type =  "qual") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) ))
+      scale_fill_brewer(type =  "qual"))
+  )
 
-
-r$plot_relative[[1]] <- r$plot_relative[[1]] + theme(axis.text.x = element_blank())
-r$plot_relative[[2]] <- r$plot_relative[[2]] + theme(axis.text.x = element_blank())
-r$plot_relative[[2]] <- r$plot_relative[[2]] + labs(y = element_blank())
-r$plot_relative[[4]] <- r$plot_relative[[4]] + labs(y = element_blank())
+r$plot_relative[[2]] <- r$plot_relative[[2]] + theme(axis.text.y = element_blank())
+r$plot_relative[[4]] <- r$plot_relative[[4]] + theme(axis.text.y = element_blank())
 ptch <- wrap_plots(r$plot_relative)
 ptch  
 
-r$plot_abs[[1]] <- r$plot_abs[[1]] + theme(axis.text.x = element_blank())
-r$plot_abs[[2]] <- r$plot_abs[[2]] + theme(axis.text.x = element_blank())
-r$plot_abs[[2]] <- r$plot_abs[[2]] + labs(y = element_blank())
-r$plot_abs[[4]] <- r$plot_abs[[4]] + labs(y = element_blank())
+r$plot_abs[[2]] <- r$plot_abs[[2]]  + theme(axis.text.y = element_blank())
+r$plot_abs[[4]] <- r$plot_abs[[4]]  + theme(axis.text.y = element_blank())
 ptch2 <- wrap_plots(r$plot_abs)
 ptch2 
 
@@ -1236,7 +1094,7 @@ by_user %>%
   pivot_longer(names_to = "event", cols = created:unlabeled, values_to = "n") %>% 
   filter(n != 0) %>% 
   ggplot() + 
-  geom_tile(aes(fct_reorder2(event, -n, actor), 
+  geom_tile(aes(fct_reorder(event, -n, .fun = sum), 
                 fct_reorder(actor, n, .fun = sum), 
                 fill = n)) +
   scale_fill_viridis_c(trans = "log10", expand = expansion()) +
