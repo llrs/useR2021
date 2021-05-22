@@ -1,30 +1,28 @@
 ## ----setup, include = FALSE-----------------------------------------------------------------------
-library("tidyverse")
 library("lubridate")
 library("BiocManager")
 library("socialGH")
 library("tidyverse")
 library("ggrepel")
 library("patchwork")
-library("gh")
-library("UpSetR")
 
 ## ----download--------------------------------------------------------------
-repository <- "Bioconductor/Contributions"
-issues <- socialGH::get_issues(repository)
-saveRDS(issues, "output/issues_bioconductor.RDS")
-gt <- lapply(issues$id, get_timelines, repository = repository)
-comments <- do.call(rbind, gt)
-saveRDS(comments, "output/comments_bioconductor.RDS")
+# repository <- "Bioconductor/Contributions"
+# issues <- socialGH::get_issues(repository)
+# saveRDS(issues, "output/issues_bioconductor.RDS")
+# gt <- lapply(issues$id, get_timelines, repository = repository)
+# comments <- do.call(rbind, gt)
+# saveRDS(comments, "output/comments_bioconductor.RDS")
+issues <- readRDS("output/issues_bioconductor.RDS")
+comments <- readRDS("output/comments_bioconductor.RDS")
 
 issues2 <- issues %>% 
   select(-n_comments) %>% 
-  mutate(actor = poster, event = list("created"),
-         repos = str_extract_all(text, "https?://github.com/[:graph:]+/[:graph:]+"))
-issues2$repos <- lapply(issues2$repos, strcapture, 
-                        pattern = "https?://github.com/((.+)/(.+))",
-                        proto = data.frame(
-                          repo = character(), org = character(), pkg = character()))
+  filter(!id %in% c(1:5, 51, 587, 764, 1540, 1541)) %>% # Remove testing issues
+  mutate(actor = poster, event = list("created"))
+
+comments <- filter(comments, !id %in% c(1:5, 51, 587, 764, 1540, 1541)) # Remove testing issues
+
 posts <- full_join(issues2, comments,  
                    by = c("assignees", "assignee", "label", "state", "locked", 
                           "milestone", "title", "created", "updated", 
@@ -36,10 +34,12 @@ posts <- full_join(issues2, comments,
          event = unlist(event, FALSE, FALSE),
          state = ifelse(event_n == 1, list("opened"), state)) %>% 
   ungroup()
+
 pr <- posts %>% 
+  ungroup() %>% 
   filter(event %in% c("merged", "committed")) %>% 
   pull(id)
-  
+
 posts <- posts %>% 
   filter(!id %in% pr) %>% 
   group_by(id) %>% 
@@ -48,6 +48,19 @@ posts <- posts %>%
          label = if_else(event_n == 1, list(NA), label),
          ) %>% 
   ungroup()
+
+github <- str_extract_all(posts$text, "https?://github.com/[:graph:]+/[:graph:]+")
+github_urls <- lapply(github, function(x){
+  y <- x[!grepl("/commit/|/issues|/blob/|/pull/|/actions|/releases/|/tree/|/projects/|/notifications/|/runs/|/raw/|#", x)]
+  y <- tolower(sub("[).,/\">\`]+$", "", y, ignore.case = TRUE))
+  unique(sub("^/|\".*$|\\]\\(.*", "", y))
+})
+repos <- lapply(github_urls, 
+                strcapture, 
+                pattern = "https?://github.com/((.+)/(.+))",
+                proto = data.frame(
+                  repo = character(), org = character(), pkg = character()))
+posts$repos <- repos
 
 approved <- posts %>% 
   select(id, label, event) %>% 
@@ -65,22 +78,6 @@ posts <- posts %>%
            sum(event == "closed") > sum(event == "reopened") ~ "No",
            TRUE ~ "Ongoing")) %>% 
   ungroup()
-saveRDS(posts, "output/submissions_bioconductor.RDS")
-
-## ----tidy_issues--------------------------------------------------------------
-releases <- data.frame(release = paste0("3.", 3:13),
-                       date = as.POSIXct(
-                         c("2016/04/04", "2016/10/18", "2017/04/25", 
-                           "2017/10/31", "2018/05/01", "2018/10/31", 
-                           "2019/05/03", "2019/10/30", "2020/04/28",
-                           "2020/10/01", "2021/05/20"), format = "%Y/%m/%d"),
-                       stringsAsFactors = FALSE)
-scale_data <- scale_x_datetime(
-  expand = expansion(add = 10), 
-  limits = as.POSIXct(c("2016-06-01", "2021-06-20"), "%Y-%m-%d"))
-theme_set(theme_minimal())
-col_bioc <- scale_color_gradient(low = "#87b13f", high = "#1a81c2")
-fill_bioc <- scale_fill_gradient(low = "#87b13f", high = "#1a81c2")
 
 
 get_element <- function(x, name) {
@@ -106,11 +103,25 @@ trelative <- function(x) {
   as.numeric(o)
 }
 
-posts <- posts %>% 
-  # TODO remove test-bioc repo organization
-  filter(!id %in% c(1:5, 51, 587, 764, 1540, 1541)) %>% # Remove testing issues
-  mutate(reviewer = vapply(assignee, get_element, name = "user", character(1)),
-         actor = vapply(actor, get_element, name = "user", character(1L)))
+reviewers <- function(assigners, unassigners) {
+  ta <- table(assigners)
+  tu <- table(unassigners)
+  y <- 0
+  n <- sum(ta) - sum(tu)
+  reviewers <- vector("character", n)
+  for(reviwer in names(ta)) {
+    x <- ta[reviwer]-tu[reviwer]
+    if (x >= 1 | is.na(x)){
+      y <- y + 1
+      reviewers[y] <- reviwer
+    }
+  }
+  reviewers
+}
+
+posts <- mutate(posts, 
+                reviewer = vapply(assignee, get_element, name = "user", character(1)),
+                actor = vapply(actor, get_element, name = "user", character(1L)))
 full <- posts %>% 
   nest_by(id) %>% 
   summarize(time_relative = trelative(data), created = data$created, 
@@ -119,6 +130,24 @@ full <- posts %>%
   distinct() %>% 
   ungroup() %>% 
   select(-locked, -milestone)
+
+saveRDS(full, "output/submissions_bioconductor.RDS")
+
+## ----tidy_issues--------------------------------------------------------------
+releases <- data.frame(release = paste0("3.", 3:13),
+                       date = as.POSIXct(
+                         c("2016/04/04", "2016/10/18", "2017/04/25", 
+                           "2017/10/31", "2018/05/01", "2018/10/31", 
+                           "2019/05/03", "2019/10/30", "2020/04/28",
+                           "2020/10/01", "2021/05/20"), format = "%Y/%m/%d"),
+                       stringsAsFactors = FALSE)
+scale_data <- scale_x_datetime(
+  expand = expansion(add = 10), 
+  limits = as.POSIXct(c("2016-06-01", "2021-06-20"), "%Y-%m-%d"))
+theme_set(theme_minimal())
+col_bioc <- scale_color_gradient(low = "#87b13f", high = "#1a81c2")
+fill_bioc <- scale_fill_gradient(low = "#87b13f", high = "#1a81c2")
+
 cut <- 5
 full %>% 
   ggplot() +
@@ -134,7 +163,7 @@ full %>%
   scale_color_viridis_d() +
   theme(legend.position = "bottom", legend.direction = "horizontal") + 
   guides(colour = guide_legend(nrow = 1), shape = guide_legend(nrow = 1))
-
+ggsave("output/bioconductor_events.png")
 
 ## ----users_submitting-----------------------------------------------------------------------------
 full %>% 
@@ -149,11 +178,12 @@ full %>%
   scale_y_continuous(expand = expansion(add = c(0, 10))) +
   scale_x_continuous(expand = expansion(add = 0.05),
                      breaks = 1:35)
+ggsave("output/bioconductor_submission_users.png")
 usr_diff_pkg <- full %>% 
   filter(event == "created",
          vapply(repos, NROW, FUN.VALUE = numeric(1L)) == 1) %>% 
   unnest(repos) %>% 
-  mutate(package = gsub("/$", "", pkg)) %>%
+  mutate(package = pkg) %>%
   group_by(actor) %>% 
   distinct(package) %>% 
   count(sort = TRUE) %>% 
@@ -168,6 +198,7 @@ usr_diff_pkg %>%
   scale_y_continuous(expand = expansion(add = c(0, 10))) +
   scale_x_continuous(expand = expansion(add = 0.05),
                      breaks = 1:35)
+ggsave("output/bioconductor_submission_packages_users.png")
 
 ## ----users_ratio----------------------------------------------------------------------------------
 usr_ratio <- full %>% 
@@ -180,13 +211,13 @@ usr_ratio <- full %>%
   ungroup() %>% 
   arrange(ratio)
 
-
 usr_ratio %>% 
   ggplot() +
   geom_bar(aes(ratio, fill = ratio)) +
   col_bioc +
   labs(title = "Authors success submitting packages",
        x = "Success ratio", y = "Users")
+ggsave("output/bioconductor_success_ratio_users.png")
 
 
 ## ----users----------------------------------------------------------------------------------------
@@ -201,7 +232,7 @@ ggplot(usr_success) +
        col = "Success ratio") +
   scale_x_continuous(expand = expansion(add = 0.5), breaks = c(1:12, 33)) +
   theme(panel.grid.minor.x = element_blank())
-
+ggsave("output/bioconductor_submission_success_ratio.png")
 
 ## ----users_progression----------------------------------------------------------------------------
 # Date progression for users that submit more than once (the previous plot is the final snapshot)
@@ -221,14 +252,10 @@ usr_submission_pkg <- full %>%
   select(actor, user_submission, created, pkg, Approved)
 
 usr_submission_pkg %>% 
-  group_by(user_submission, Approved) %>% 
-  count() %>% 
-  ungroup() %>% 
   group_by(user_submission) %>% 
-  mutate(ratio = n/sum(n)) %>% 
+  summarize(ratio = sum(Approved == "Yes")/n(),
+            n = n()) %>% 
   ungroup() %>% 
-  filter(Approved == "Yes") %>% 
-  select(user_submission, ratio, n) %>% 
   ggplot() + 
   geom_path(aes(user_submission, ratio, size = n, col = ratio)) +
   geom_point(aes(user_submission, ratio, size = n-5, col = ratio), show.legend = FALSE) +
@@ -239,46 +266,21 @@ usr_submission_pkg %>%
        x = "Number of submission", size = "Users") +
   guides(col = FALSE) + 
   theme(panel.grid.minor.x = element_blank())
-
-
-
-## ----user_submission_progression------------------------------------------------------------------
-usr_submission_pkg %>% 
-  group_by(actor) %>% 
-  mutate(max_submissions = max(user_submission)) %>% 
-  group_by(user_submission, max_submissions) %>% 
-  count(Approved) %>% 
-  mutate(ratio = n/sum(n),
-         ratio = if_else(Approved == "No", 1-ratio, ratio)) %>% 
-  filter(Approved == "Yes" | ratio == 0) %>% 
-  ggplot() +
-  geom_point(aes(max_submissions, user_submission, size = ratio, col = ratio)) +
-  scale_colour_binned(low = "#87b13f", high = "#1a81c2", 
-                      guide = guide_bins(show.limits = TRUE)) +
-  scale_size_binned(guide = guide_bins(show.limits = TRUE)) +
-  scale_x_continuous(breaks = 1:30) +
-  scale_y_continuous(breaks = 1:30) +
-  theme(panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank()) +
-  labs(title = "User submissions", y = "Submission", 
-       x = "Max number of submissions",
-       size = "Approval ratio", col = "Approval ratio")
-
+ggsave("output/bioconductor_approval_submissions.png")
 
 ## ----submissions----------------------------------------------------------------------------------
 full %>% 
-  filter(event == "created") %>% 
-  group_by(year = year(created)) %>% 
-  summarise(n = sum(Approved %in% c("Yes", "No")), 
-            ratio = sum(Approved == "Yes")/n) %>%
+  filter(event == "created",
+         Approved %in% c("Yes", "No")) %>% 
+  group_by(year = year(created), Approved) %>% 
+  summarise(n = n(), .groups = "keep") %>%
   ungroup() %>% 
   ggplot() +
-  geom_col(aes(year, n, fill = ratio)) + 
+  geom_col(aes(year, n, fill = Approved))  +
   labs(title = "Yearly submissions and approval", 
        y = "Issues", x = element_blank(), 
-       fill = "Approval ratio") +
-  scale_fill_continuous(low = "#87b13f", high = "#1a81c2", limits = c(NA, 1))
-
+       fill = "Approval ratio")
+ggsave("output/bioconductor_global_submission_rate.png")
 
 ## ----reviewers, include=FALSE---------------------------------------------------------------------
 full %>% 
@@ -345,9 +347,11 @@ normal_reviews %>%
   ungroup() %>% 
   ggplot() +
   geom_line(aes(year, share, col = reviewer)) +
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, NA)) +
   labs(x = element_blank(), y = element_blank(),
-       title = "Share of issues reviewed")
+       title = "Share of issues reviewed",
+       linetype = "Reviewer", col = "Reviewer")
+ggsave("output/bioconductor_reviewers_share.png")
 
 
 ## ----reviewer_comments----------------------------------------------------------------------------
@@ -366,7 +370,7 @@ approval_reviewers %>%
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Issues handled", y = "Approval ratio",
        title = "Reviewers approval Ratio", col = "Reviewer")
-
+ggsave("output/bioconductor_approval_ratio.png")
 
 ## ----reviewers_time-------------------------------------------------------------------------------
 breaks <- function(limits) {
@@ -379,7 +383,9 @@ normal_reviews %>%
   ggbeeswarm::geom_quasirandom(aes(reviewer, time_opened, 
                                    col = Approved, shape = Approved), 
                                size = 0.75) +
-  labs(y = "Days open", title = "Time open by reviewers")
+  labs(y = "Days open", title = "Time open by reviewers",
+       x = element_blank())
+ggsave("output/bioconductor_open_time_reviewers.png")
 
 # Focusing a bit
 
@@ -393,7 +399,8 @@ normal_reviews %>%
   coord_cartesian(ylim = c(0, 150)) +
   scale_y_continuous(expand = expansion(mult = 0, add = 0)) +
   labs(y = "Days open", title = "Time open by reviewers", 
-       subtitle = "A zoom")
+       subtitle = "A zoom", x = element_blank())
+ggsave("output/bioconductor_open_time_reviewers_zoom.png")
 
 
 ## ----reviewer_time_diff---------------------------------------------------------------------------
@@ -438,6 +445,7 @@ reviewers_time_approved %>%
                      breaks = seq(from = 0, to = 130, by = 20)) +
   scale_shape_manual(values = c(15, 17)) +
   scale_x_discrete(expand = expansion(add = 0.1))
+ggsave("output/bioconductor_reviewers_speed.png")
 
 
 ## ----reviewers_comments---------------------------------------------------------------------------
@@ -449,7 +457,7 @@ normal_reviews %>%
                                size = 0.75) +
   
   labs(y = "Comments", title = "Comments on the issue", x = element_blank())
-
+ggsave("output/bioconductor_comments_reviwers.png")
 
 ## ----reviewer_comment_diff------------------------------------------------------------------------
 reviewer_comments <- normal_reviews %>% 
@@ -493,7 +501,7 @@ reviewers_comment_approved %>%
                      breaks = seq(from = 0, to = 70, by = 20)) +
   scale_shape_manual(values = c(15, 17)) + 
   scale_x_discrete(expand = expansion(add = 0.1))
-
+ggsave("output/bioconductor_comments_approval.png")
 
 ## ----acceptance_comments, include = FALSE---------------------------------------------------------
 normal_reviews %>%  
@@ -520,7 +528,7 @@ normal_reviews %>%
   facet_wrap(~reviewer, scales = "free") +
   labs(x = "Days opened", y = "Comments", 
        title = "Comments and open days per reviewer")
-
+ggsave("output/bioconductor_reviewers_comments_time_open.png")
 
 
 ## ----submission_rate------------------------------------------------------------------------------
@@ -540,7 +548,7 @@ full %>%
        x = "Day of year", y = "Issues opened") +
   scale_x_continuous(expand = expansion(add = 2)) +
   scale_y_continuous(expand = expansion(add = 1))
-
+ggsave("output/bioconductor_daily_submission.png")
 
 ## ----margin_submission----------------------------------------------------------------------------
 release_attempt <- function(x, release = releases) {
@@ -565,7 +573,7 @@ df2 %>%
   scale_x_continuous(expand = expansion())  + 
   labs(title = "Days till next release", y = "Issues", x = "Days") +
   guides(fill = FALSE, col = FALSE )
-
+ggsave("output/bioconductor_days_submission.png")
 
 ## ----margin_submission_accepted, include=FALSE----------------------------------------------------
 df2 %>% 
@@ -609,7 +617,7 @@ df2 %>%
   labs(x = "Days till release", y = "Days open",
        title = "Packages not closed the same day as submitted",
        subtitle = "In red the worse time to submit. Each horitzonal bar indicates a missed release")
-
+ggsave("output/bioconductor_days_till_release_days_open.png")
 
 ## ----open_releases--------------------------------------------------------------------------------
 df2 %>% 
@@ -623,7 +631,7 @@ df2 %>%
   scale_data +
   labs(x = element_blank(), y = "Days open", 
        title = "Time open") 
-
+ggsave("output/bioconductor_days_open.png")
 
 ## ----pkg_source-----------------------------------------------------------------------------------
 df2 %>% 
@@ -639,7 +647,7 @@ df2 %>%
   labs(x = "Repository belongs to submitter", y = "Submissions",
        title = "Success if repository belongs to the submitter",
        subtitle = "The fraction indicates: Not approved/approved")
-
+ggsave("output/bioconductor_org_pkg_submissions.png")
 
 ## ----time_rejected--------------------------------------------------------------------------------
 df2 %>% 
@@ -649,11 +657,10 @@ df2 %>%
   # fill_bioc +
   labs(x = "Days open", y = "Issues", 
        title = "Most not approved packages are closed the same day") 
-
+ggsave("output/bioconductor_open_time_rejected.png")
 
 ## ----repolink-------------------------------------------------------------------------------------
-rejected <- df2 %>% 
-  filter(Approved == "No")
+rejected <- filter(df2, Approved == "No")
 
 ## ----repolinks------------------------------------------------------------------------------------
 rejected %>%
@@ -686,22 +693,6 @@ rejected %>%
 
 
 ## ----by_issue-------------------------------------------------------------------------------------
-reviewers <- function(assigners, unassigners) {
-  ta <- table(assigners)
-  tu <- table(unassigners)
-  y <- 0
-  n <- sum(ta) - sum(tu)
-  reviewers <- vector("character", n)
-  for(reviwer in names(ta)) {
-    x <- ta[reviwer]-tu[reviwer]
-    if (x >= 1 | is.na(x)){
-      y <- y + 1
-      reviewers[y] <- reviwer
-    }
-  }
-  reviewers
-}
-
 by_issue <- full %>% 
   group_by(id) %>% 
   summarize(time_window = difftime(max(created), min(created), units = "days"),
@@ -790,7 +781,7 @@ by_user %>%
   labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
        title = "Reviewers involvement") +
   theme_minimal()
-
+ggsave("output/bioconductor_reviewers_comments.png")
 
 ## ----by_user2-------------------------------------------------------------------------------------
 by_user %>% 
@@ -808,7 +799,7 @@ by_user %>%
   labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
        title = "Users involvement") +
   theme_minimal()
-
+ggsave("output/bioconductor_users_comments.png")
 
 ## ----by_event-------------------------------------------------------------------------------------
 by_event1 <- full %>% 
@@ -854,7 +845,7 @@ by_event %>%
   scale_color_binned(trans = "log10", guide = "bins") +
   scale_size(trans = "log10") +
   theme_minimal()
-
+ggsave("output/bioconductor_events.png")
 
 ## ----second_plot----------------------------------------------------------------------------------
 full %>% 
@@ -869,7 +860,7 @@ full %>%
                          high = "#132B43", low = "#56B1F7") +
   labs(y = element_blank(), x = "Issue", title = "Events per issue", 
        col = "Times")
-
+ggsave("output/bioconductor_events_issues.png")
 
 ## ----events_time----------------------------------------------------------------------------------
 unit <- "days"
@@ -881,7 +872,7 @@ full %>%
   geom_histogram(aes(event_n), bins = 40) +
   labs(x = "Events", y = "Issues", title = "Events per issue") + 
   theme_minimal()
-
+ggsave("output/bioconductor_events_issue.png")
 
 ## ----events_time2---------------------------------------------------------------------------------
 diff_time <- full %>% 
@@ -902,7 +893,7 @@ diff_time %>%
   scale_x_continuous(breaks = 1:7*365, labels = function(x) {paste(x/365, "year")}) + 
   theme_minimal() +
   theme(axis.text.x = element_text())
-
+ggsave("output/bioconductor_events_time.png")
 
 ## ----events_time3---------------------------------------------------------------------------------
 diff_time %>% 
@@ -919,7 +910,7 @@ diff_time %>%
   scale_x_continuous(breaks = 1:7*7, labels = function(x) {paste(x/7, "weeks")}) + 
   theme_minimal() +
   theme(axis.text.x = element_text()) 
-
+ggsave("output/bioconductor_events_time_zoom.png")
 
 ## ----assignments----------------------------------------------------------------------------------
 by_issue %>% 
@@ -931,7 +922,7 @@ by_issue %>%
   scale_color_brewer(labels = c("No", "Yes"), type = "qual") +
   scale_shape(labels = c("No", "Yes")) +
   scale_size(trans = "log10")
-
+ggsave("output/bioconductor_reviewers_change.png")
 
 ## ----open_close2----------------------------------------------------------------------------------
 by_issue %>% 
@@ -945,11 +936,10 @@ by_issue %>%
   facet_wrap(~Approved, scales = "free") +
   labs(x = "Closers", y = "Openers", title = "Issues closers and reopeners", 
        subtitle = "Approved?", size = "Submissions")
-
+ggsave("output/bioconductor_change_effect.png")
 
 ## ----submission_acceptance------------------------------------------------------------------------
-revi <- by_issue %>% 
-  filter(lengths(reviewers) != 0)
+revi <- filter(by_issue, lengths(reviewers) != 0)
 
 reviwer_didnt_close <- revi %>% 
   filter(!is.na(closer),
@@ -979,7 +969,7 @@ revi %>%
   labs(x = element_blank(), y = "Reviewers comments", title = "Comments from reviewers", size = "Issues",
        subtitle = "Reviewers assigned:") + 
   theme_minimal()
-
+ggsave("output/bioconductor_reviewers_comments.png")
 
 ## ----reviews--------------------------------------------------------------------------------------
 revi %>% 
@@ -991,7 +981,7 @@ revi %>%
        title = "Comments from reviewers") + 
   facet_wrap(~Approved, scales = "free") +
   theme_minimal()
-
+ggsave("output/bioconductor_comments_reviewers_others.png")
 
 ## ----submission_acceptance2-----------------------------------------------------------------------
 ord_rev <- revi_sum %>% 
@@ -1029,12 +1019,13 @@ r$plot_relative[[2]] <- r$plot_relative[[2]] + theme(axis.text.y = element_blank
 r$plot_relative[[4]] <- r$plot_relative[[4]] + theme(axis.text.y = element_blank())
 ptch <- wrap_plots(r$plot_relative)
 ptch  
+ggsave("output/bioconductor_reviewers_ratios.png")
 
 r$plot_abs[[2]] <- r$plot_abs[[2]]  + theme(axis.text.y = element_blank())
 r$plot_abs[[4]] <- r$plot_abs[[4]]  + theme(axis.text.y = element_blank())
 ptch2 <- wrap_plots(r$plot_abs)
 ptch2 
-
+ggsave("output/bioconductor_reviewers_numbers.png")
 
 ## ----events_days----------------------------------------------------------------------------------
 full %>% 
@@ -1044,7 +1035,7 @@ full %>%
   labs(title = "Events along time", subtitle = "Approved?",
        x = "Days", y = element_blank(), col = "Issue") + 
   theme_minimal()
-
+ggsave("output/bioconductor_events_time.png")
 
 ## ----events_user_distribution---------------------------------------------------------------------
 p1 <- ggplot(by_issue) +
@@ -1056,7 +1047,7 @@ p2 <- ggplot(by_issue) +
   labs(y = element_blank(), x = element_blank(), 
        title = "Different users involved in the issue")
 p1 + p2
-
+ggsave("output/bioconductor_events_and_users.png")
 
 ## ----actor_event_types----------------------------------------------------------------------------
 by_issue %>% 
@@ -1067,7 +1058,7 @@ by_issue %>%
        size = "Issues") + 
   scale_radius() +
   scale_x_discrete(drop = FALSE) 
-
+ggsave("output/bioconductor_events_users.png")
 
 ## ----actors_events--------------------------------------------------------------------------------
 by_issue %>% 
@@ -1082,7 +1073,7 @@ by_issue %>%
        title = "Users involved on the issues and events") +
   scale_x_discrete(drop = FALSE) + 
   scale_size(breaks = c(seq(0, 300, by = 50)))
-
+ggsave("output/bioconductor_events_users_cloud.png")
 
 ## ----who------------------------------------------------------------------------------------------
 top_events <- 35
@@ -1101,19 +1092,21 @@ by_user %>%
   labs(title = "Events by users", y = element_blank(), x = element_blank(),
        fill = "Events") + 
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-  # coord_flip()
-
+ggsave("output/bioconductor_users_events.png")
 
 ## ----comments_plot--------------------------------------------------------------------------------
 comments <- full %>%
+  group_by(id) %>% 
   mutate(n = sum(event %in% "assigned"),
          assigners = list(reviewer[event == "assigned"]),
          unassigners = list(reviewer[event == "unassigned"]),
-         reasigned  = any(event %in% "unassigned"),
-         reviewers = list(reviewers(unlist(assigners, FALSE, FALSE), 
+         reasigned  = any(event %in% "unassigned")) %>% 
+  group_by(id) %>% 
+  mutate(reviewers = list(reviewers(unlist(assigners, FALSE, FALSE), 
                                     unlist(unassigners, FALSE, FALSE))),
          reviewers_n = lengths(assigners)-lengths(unassigners),
          creator = unique(actor[event == "created"])) %>% 
+  ungroup() %>% 
   filter(actor != "bioc-issue-bot", event == "commented", reviewers_n >= 1) %>% 
   group_by(id) %>% 
   summarise(speaking = n_distinct(actor), 
@@ -1127,7 +1120,7 @@ comments %>%
   geom_count(aes(author, reviewer)) +
   labs(title = "Comments", x = "Authors", y = "Reviewer(s)", size = "Issues") +
   theme_minimal()
-
+ggsave("output/bioconductor_comments_authors_reviewers.png")
 
 ## ----comment_plot2--------------------------------------------------------------------------------
 comments %>% 
@@ -1142,7 +1135,7 @@ comments %>%
   scale_y_continuous(breaks = seq(0, 13, by = 2)) +
   scale_radius() +
   theme_minimal()
-
+ggsave("output/bioconductor_comments_mtmorgan_others.png")
 
 ## ----bioc_bot_plot--------------------------------------------------------------------------------
 comments <- full %>% 
@@ -1162,6 +1155,7 @@ bioc_bot <- comments %>%
     str_detect(text, "DESCRIPTION file") ~ "Unmatch",
     str_detect(text, "Your package has been approved for building") ~ "Building",
     str_detect(text, "We only start builds when the `Version`") ~ "Update version",
+    str_detect(text, "fix your version number") ~ "Fix version",
     str_detect(text, "a GitHub repository URL") ~ "Missing repository",
     str_detect(text, "more than one GitHub URL") ~ "Multiple repositories",
     str_detect(text, "Add SSH keys") ~ "SSH key",
@@ -1177,7 +1171,7 @@ bioc_bot %>%
   scale_color_viridis_c(trans = "log10", expand = expansion()) +
   labs(x = "Issue", title = "bioc-issue-bot activity", 
        y = element_blank(), col = "Comments")
-
+ggsave("output/bioconductor_bioc_bot_activity.png")
 
 ## ----user_events----------------------------------------------------------------------------------
 bm3 <- bioc_bot %>% 
@@ -1189,14 +1183,15 @@ bm3 <- bioc_bot %>%
   mutate(perc = n/total)
 
 bm3 %>% 
+  filter(reason != "Accepted") %>% 
   group_by(reason) %>% 
-  filter(n_distinct(Approved) >= 2 | all(Approved == "No")) %>% 
   ggplot() +
-  geom_jitter(aes(Approved, n, col = Approved, shape = Approved), height = 0) +
-  facet_wrap(~reason, scales = "free", ncol = 3) +
+  geom_jitter(aes(Approved, n, col = Approved, shape = Approved), height = 0) + 
+  scale_y_continuous(limits = c(0, NA)) +
+  facet_wrap(~reason, ncol = 3) +
   labs(x = element_blank(), y = "Comments", 
        title = "Diferences between accepted and non accepted issues by bioc-issue-bot comments")
-
+ggsave("output/bioconductor_differences_bot_comments_approved.png")
 
 ## ----significant, eval=FALSE, include=FALSE-------------------------------------------------------
 ## bm3 %>%
@@ -1228,7 +1223,7 @@ bm_com %>%
   facet_wrap(~ Approved) +
   labs(x = "All comments", title = "bioc-issue-bot comments",
        y = "Build related", size = "Issues")
-
+ggsave("output/bioconductor_bioc_bot_build_comments.png")
 
 ## ----bot_comments_approve-------------------------------------------------------------------------
 # t.test(diff ~ Approved, data = ungroup(bm_com))
@@ -1241,7 +1236,7 @@ bm_com %>%
   labs(x = element_blank(), 
        title = "bioc-issue-bot comments not related to builds", 
        y = "Comments not related to builds", fill = "Issues")
-
+ggsave("output/bioconductor_bioc_bot_comments_no_build.png")
 
 ## ----comments_issues------------------------------------------------------------------------------
 com_is <- full %>% 
@@ -1297,7 +1292,7 @@ ra /(ro + oa ) +
   plot_annotation(title = "Comments on submissions by users",
                   tag_levels = "i") &
   plot_layout(guides = "collect") 
-
+ggsave("output/bioconductor_comments_user_reviewer_author.png")
 
 ## ----comments_approved----------------------------------------------------------------------------
 com_is_w <- com_is %>% 
@@ -1338,10 +1333,10 @@ a + b + d + plot_layout(ncol = 1,
                         guides = "collect")  +
   plot_annotation(title = "Comments on submissions by users",
                   subtitle = "Separated by if approved or not")
-
+ggsave("output/bioconductor_comments_submissions_reviewer_other_authors.png")
 
 ## ----delays---------------------------------------------------------------------------------------
-
+# TODO continue here
 closed_c <- full %>% 
   mutate(comment_n = cumsum(event == "commented" & actor != "bioc-issue-bot")) %>% 
   filter(event == "closed") %>% 
@@ -1357,7 +1352,7 @@ full %>%
   facet_wrap(~Approved, scales = "free") +
   guides(col = FALSE) + 
   labs(x = "Since creation of the issue (days)", y = "Comments", title = "Comments on issues")
-
+ggsave("output/bioconductor_")
 
 ## ----closing--------------------------------------------------------------------------------------
 closed_c <- mutate(closed_c, Closed = TRUE)
