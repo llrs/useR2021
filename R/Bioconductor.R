@@ -1268,6 +1268,7 @@ ra <- com_is_w %>%
   geom_point(aes(Author, Reviewer, col = n)) +
   scale_color_continuous(limits = c(1, 50)) +
   guides(col = FALSE)
+
 ro <- com_is_w %>% 
   group_by(Other, Reviewer) %>% 
   count(sort = TRUE) %>% 
@@ -1336,27 +1337,31 @@ a + b + d + plot_layout(ncol = 1,
 ggsave("output/bioconductor_comments_submissions_reviewer_other_authors.png")
 
 ## ----delays---------------------------------------------------------------------------------------
-# TODO continue here
 closed_c <- full %>% 
+  group_by(id) %>% 
   mutate(comment_n = cumsum(event == "commented" & actor != "bioc-issue-bot")) %>% 
   filter(event == "closed") %>% 
   filter(event_n == max(event_n)) %>% 
-  select(id, time_relative, comment_n, event_n, Approved)
+  select(id, time_relative, comment_n, event_n, Approved) %>% 
+  ungroup() %>% 
+  mutate(Closed = TRUE)
 
 full %>% 
   filter(event %in% c("commented", "created") & actor != "bioc-issue-bot") %>% 
+  group_by(id) %>% 
   mutate(comment_n = cumsum(event == "commented" & actor != "bioc-issue-bot")) %>% 
+    ungroup() %>% 
   ggplot() +
   geom_point(aes(time_relative, comment_n, col = id),  data = closed_c, shape = "square") +
   geom_line(aes(time_relative, comment_n, group = id, col = id)) +
   facet_wrap(~Approved, scales = "free") +
   guides(col = FALSE) + 
   labs(x = "Since creation of the issue (days)", y = "Comments", title = "Comments on issues")
-ggsave("output/bioconductor_")
+ggsave("output/bioconductor_comments_issues.png")
 
 ## ----closing--------------------------------------------------------------------------------------
-closed_c <- mutate(closed_c, Closed = TRUE)
 aftr <- full %>% 
+  group_by(id) %>% 
   filter(event %in% c("commented", "created") & actor != "bioc-issue-bot") %>% 
   mutate(comment_n = cumsum(event == "commented" & actor != "bioc-issue-bot"),
          Closed = FALSE) %>% 
@@ -1373,10 +1378,11 @@ aftr %>%
   labs(x = element_blank(), y = "Comments", 
        title = "Comments after being closed",
        size = "Issues")
-
+ggsave("output/bioconductor_comments_after_closing.png")
 
 ## ----successful_build-----------------------------------------------------------------------------
 full %>% 
+  group_by(id) %>% 
   summarise(success_build = any(event == "labeled" & label == "OK"),
             Approved = unique(Approved)) %>% 
   ungroup() %>% 
@@ -1394,6 +1400,7 @@ logic_nth <- function(x, n){
   y
 }
 builds <- full %>% 
+  group_by(id) %>% 
   mutate(assigners = list(reviewer[event %in% "assigned"]),
             unassigners = list(reviewer[event %in% "unassigned"]),
             reviewers = list(reviewers(unlist(assigners, FALSE, FALSE), 
@@ -1427,7 +1434,7 @@ builds %>%
        subtitle = "Submission approved?",
        col = "Event", shape = "Event") +
   theme_minimal()
-
+ggsave("output/bioconductor_build_time.png")
 
 ## ----time_comment---------------------------------------------------------------------------------
 bc <- builds %>% 
@@ -1447,17 +1454,17 @@ bc %>%
        x = "Days since submission", y = "Issue", 
        subtitle = "Submission approved?") +
   theme_minimal()
-
+ggsave("output/bioconductor_comment_reviewer_issues.png")
 
 ## ----time_accepted--------------------------------------------------------------------------------
 bc %>% 
   filter(!is.na(Accepted) & !is.na(`Reviewer comment`) & Approved == "Yes") %>% 
   ggplot() +
   geom_linerange(aes(y = id, xmax = Accepted, xmin = `Reviewer comment`)) +
-  labs(title = "Time comment from the reviewer after successful build and acceptance",
+  labs(title = "Time since from the reviewer's comment after successful build and acceptance",
        x = "Days since submission", y = "Issue") +
   theme_minimal()
-
+ggsave("output/bioconductor_succesfult_build_acceptance_time.png")
 
 ## ----time_build_plot------------------------------------------------------------------------------
 p1 <- bc %>% 
@@ -1472,7 +1479,7 @@ p1 / p1 +
   coord_cartesian(xlim = c(0, 7)) +
   labs(title = "Zoom to the first week") +
   plot_annotation(title = "Days between submission and the first successful build")
-
+ggsave("output/bioconductor_submission_time_to_build.png")
 
 ## ----time_review_plot_zoom------------------------------------------------------------------------
 bc %>% 
@@ -1484,7 +1491,7 @@ bc %>%
        title = "Days between successful build and comment from reviwers",
        x = "Days", y = "Issues") +
   theme_minimal()
-
+ggsave("output/bioconductor_build_time_to_comment.png")
 
 ## ----acceptance_plot------------------------------------------------------------------------------
 p2 <- bc %>% 
@@ -1495,7 +1502,7 @@ p2 <- bc %>%
   theme_minimal()
 p2 / p2 + coord_cartesian(xlim = c(0, 20)) + 
   labs(title = element_blank(), subtitle = "A zoom")
-
+ggsave("output/bioconductor_time_to_acceptance.png")
 
 ## ----time_acceptance_plot-------------------------------------------------------------------------
 bc %>% 
@@ -1504,7 +1511,7 @@ bc %>%
   labs(title = "Days between comment from reviwers and acceptance",
        x = "Days", y = "Issues") +
   theme_minimal()
-
+ggsave("output/bioconductor_comment_time_to_acceptance.png")
 
 ## ----times_phases---------------------------------------------------------------------------------
 p3 <- bc %>% 
@@ -1512,18 +1519,18 @@ p3 <- bc %>%
   ggplot() + 
   geom_point(aes(`Built correctly`, time_review, 
                  col = Approved, shape = Approved)) +
-  labs(y = "Time between built and review (days)") +
+  labs(y = "Time between built and review (days)", x = "Built (days)") +
   theme_minimal()
 p4 <- bc %>% 
   filter(!is.na(time_review), !is.na(time_acceptance)) %>% 
   ggplot() + 
   geom_point(aes(time_review, time_acceptance), 
              col = "#00BFC4", shape = "triangle") +
-  labs(x = "Time between built and review (days)",
+  labs(x = "Time between build and review (days)",
        y = "Time between review and acceptance (days)") +
   theme_minimal()
 p3 + p4
-
+ggsave("output/bioconductor_build_time_comments_review.png")
 
 ## ----table_steps----------------------------------------------------------------------------------
 bc %>% 
@@ -1540,7 +1547,6 @@ bc %>%
 
 ## ----labels_general-------------------------------------------------------------------------------
 labels <- full %>% 
-  ungroup() %>% 
   filter(event == "labeled") %>% 
   mutate(label = unlist(label),
          label = case_when(
@@ -1557,7 +1563,9 @@ labels <- full %>%
 ## ----labels_plot_overview-------------------------------------------------------------------------
 ord_label <- c("1. awaiting moderation",  
                "2. review in progress", "3a. accepted", 
-               "3b. declined", "3c. inactive", "ABNORMAL", 
+               "3b. declined", "3c. inactive", 
+               "3d. closed pending pre-review changes",
+               "ABNORMAL", 
                "VERSION BUMP REQUIRED", 
                "TIMEOUT", "ERROR", 
                "WARNINGS", "OK")
@@ -1569,7 +1577,7 @@ labels %>%
   scale_fill_continuous(trans = "log10") +
   labs(x = "Issue", y = element_blank(), title = "Labels per Issue",
        fill = "Times")
-
+ggsave("output/bioconductor_labels_issues.png")
 
 ## ----label_differences----------------------------------------------------------------------------
 labels %>% 
@@ -1585,23 +1593,23 @@ labels %>%
   guides(col = FALSE, shape = FALSE) +
   labs(x = element_blank(), y = "Times", 
        title = "Times each label has appeared on each issue")
-
+ggsave("output/bioconductor_labels_type.png")
 
 ## ----significant_label, eval=FALSE, include=FALSE-------------------------------------------------
-## labels %>%
-##   group_by(id) %>%
-##   count(label, Approved, sort = TRUE) %>%
-##   ungroup() %>%
-##   filter(Approved != "Ongoing") %>%
-##   group_by(label) %>%
-##   filter(n_distinct(Approved) == 2, n_distinct(n) > 2) %>%
-##   nest_by() %>%
-##   mutate(t = list(t.test(n ~ Approved, data = data))) %>%
-##   mutate(broom::glance(t)) %>%
-##   ungroup() %>%
-##   mutate(adj.p.value = p.adjust(p.value)) %>%
-##   filter(adj.p.value < 0.05) %>%
-##   pull(label)
+labels %>%
+  group_by(id) %>%
+  count(label, Approved, sort = TRUE) %>%
+  ungroup() %>%
+  filter(Approved != "Ongoing") %>%
+  group_by(label) %>%
+  filter(n_distinct(Approved) == 2, n_distinct(n) > 2) %>%
+  nest_by() %>%
+  mutate(t = list(t.test(n ~ Approved, data = data))) %>%
+  mutate(broom::glance(t)) %>%
+  ungroup() %>%
+  mutate(adj.p.value = p.adjust(p.value)) %>%
+  filter(adj.p.value < 0.05) %>%
+  pull(label)
 
 
 ## ----labels_table---------------------------------------------------------------------------------
