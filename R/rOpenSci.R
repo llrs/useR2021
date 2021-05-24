@@ -1,38 +1,34 @@
-## ----setup, include = FALSE-----------------------------------------------------------------------
-knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE, 
-                      echo = FALSE, cache = FALSE)
-
+library("socialGH")
+library("tidyverse")
+library("ggrepel")
+library("patchwork")
 
 ## ----downloading, eval=FALSE,cache=FALSE----------------------------------------------------------
-## library("socialGH")
-## repo <- "ropensci/software-review"
-## gi <- get_issues(repo)
-## i <- unique(gi$id)
-## # gt <- get_timelines(repo) there's a limit of 40000 so we cannot use it.
-## gt <- lapply(i, get_timelines, repository = repo)
-## gt2 <- do.call(rbind, gt)
-## library("dplyr")
-## gi2 <- gi %>%
-##   select(-n_comments) %>%
-##   mutate(actor = poster, event = "created")
-## column <- intersect(colnames(gt2), colnames(gi2))
-## g <- rbind(gi2[, colnames(gt2)], gt2) %>%
-##   arrange(id, created) %>%
-##   group_by(id) %>%
-##   mutate(event_n = 1:n(),
-##          event = unlist(event, FALSE, FALSE),
-##          state = ifelse(event_n == 1, list("opened"), state))
-## pr <- g %>%
-##   ungroup() %>%
-##   filter(event %in% c("merged", "committed")) %>%
-##   pull(id)
-## g2 <- filter(g, !id %in% pr)
-## saveRDS(g2, file = "static/20200902_github_rOpenSci_data.RDS")
+repo <- "ropensci/software-review"
+gi <- get_issues(repo)
+i <- unique(gi$id)
+# gt <- get_timelines(repo) there's a limit of 40000 so we cannot use it.
+gt <- lapply(i, get_timelines, repository = repo)
+gt2 <- do.call(rbind, gt)
+gi2 <- gi %>%
+  select(-n_comments) %>%
+  mutate(actor = poster, event = "created")
+column <- intersect(colnames(gt2), colnames(gi2))
+g <- rbind(gi2[, colnames(gt2)], gt2) %>%
+  arrange(id, created) %>%
+  group_by(id) %>%
+  mutate(event_n = 1:n(),
+         event = unlist(event, FALSE, FALSE),
+         state = ifelse(event_n == 1, list("opened"), state))
+pr <- g %>%
+  ungroup() %>%
+  filter(event %in% c("merged", "committed")) %>%
+  pull(id)
+g2 <- filter(g, !id %in% pr)
+saveRDS(g2, file = "output/github_rOpenSci_data.RDS")
 
 
 ## ----read-----------------------------------------------------------------------------------------
-init <- readRDS(here::here("static", "20200902_github_rOpenSci_data.RDS"))
-library("tidyverse")
 theme_set(theme_minimal())
 get_element <- function(x, name) {
   if (!is.null(names(x))) {
@@ -41,7 +37,7 @@ get_element <- function(x, name) {
     NA_character_
   }
 } 
-init <- init %>% 
+init <- g2 %>% 
   filter(id != 26) %>%
   mutate(reviewer = vapply(assignee, get_element, name = "user", character(1)),
          actor = vapply(actor, get_element, name = "user", character(1L)))
@@ -144,10 +140,10 @@ init %>%
   labs(x = element_blank(), y = "Issue", col = "Event",
        title = "Issues opened on rOpenSci") +
   theme_minimal()
-
+ggsave("output/ropensci_issues_time.png")
 
 ## ----by-users-------------------------------------------------------------------------------------
-library("ggrepel")
+
 editors <- by_user %>% 
   filter(is_editor) %>% 
   distinct(actor) %>% 
@@ -164,7 +160,7 @@ by_user %>%
   labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
        title = "Editors involvement") +
   theme_minimal()
-
+ggsave("output/ropensci_editors_comments_issues.png")
 
 ## ----by-user2-------------------------------------------------------------------------------------
 by_user %>% 
@@ -181,7 +177,7 @@ by_user %>%
   labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
        title = "Users involvement") +
   theme_minimal()
-
+ggsave("output/ropensci_users_involvement.png")
 
 ## ----events-view----------------------------------------------------------------------------------
 init %>% 
@@ -201,7 +197,7 @@ init %>%
        y = "Number of different users", label = "Events", size = "Events",
        col = "Events") +
   theme_minimal()
-
+ggsave("output/ropensci_events_users.png")
 
 ## ----second-plot----------------------------------------------------------------------------------
 init %>% 
@@ -213,7 +209,7 @@ init %>%
   labs(x = "Issue", y = element_blank(), col = "Times", 
        title = "Events per issue") +
   theme_minimal()
-
+ggsave("output/ropensci_events_issues.png")
 
 ## ----events-time----------------------------------------------------------------------------------
 init %>% 
@@ -222,7 +218,7 @@ init %>%
   geom_histogram(aes(n), binwidth = 5) +
   labs(x = "Events", y = "Issues", title = "Events per issue") +
   theme_minimal()
-
+ggsave("output/ropensci_events_per_issue.png")
 
 ## ----events-time2---------------------------------------------------------------------------------
 init %>% 
@@ -237,7 +233,7 @@ init %>%
        col = "Events per days", 
        title = "Number of events and time")  +
   theme(axis.text.x = element_text())
-
+ggsave("output/ropensci_events_days.png")
 
 ## ----events-time3---------------------------------------------------------------------------------
 init %>% 
@@ -257,7 +253,7 @@ init %>%
        subtitle = "A zoom to the fastest half") +
   scale_x_continuous(breaks = 1:7*14, labels = function(x) {paste(x/7, "weeks")}) +
   theme_minimal()
-
+ggsave("output/ropensci_events_days_zoom.png")
 
 ## ----assignments----------------------------------------------------------------------------------
 by_issue %>% 
@@ -269,7 +265,7 @@ by_issue %>%
   scale_color_brewer(labels = c("No", "Yes"), type = "qual") +
   scale_shape(labels = c("No", "Yes")) +
   scale_size(trans = "log10")
-
+ggsave("output/ropensci_editors.png")
 
 ## ----submission-acceptance------------------------------------------------------------------------
 revi <- by_issue %>% 
@@ -301,7 +297,7 @@ revi %>%
   labs(x = element_blank(), y = "Editor comments", 
        title = "Comments from editors") + 
   theme_minimal()
-
+ggsave("output/ropensci_comments_editors.png")
 
 ## ----events-days----------------------------------------------------------------------------------
 trelative <- function(x) {
@@ -335,7 +331,7 @@ full %>%
   labs(title = "Events along time till closed",
        x = "Days", y = element_blank(), col = "Issue") + 
   theme_minimal()
-
+ggsave("output/ropensci_events_issue_days.png")
 
 ## ----events-user-distribution---------------------------------------------------------------------
 p1 <- ggplot(by_issue) +
@@ -346,9 +342,8 @@ p2 <- ggplot(by_issue) +
   geom_bar(aes(as.factor(diff_users))) +
   labs(y = element_blank(), x = element_blank(), 
        title = "Different users involved in the issue")
-library("patchwork")
 p1 + p2
-
+ggsave("output/ropensci_events_users_different.png")
 
 ## ----actor-event-types----------------------------------------------------------------------------
 by_issue %>% 
@@ -360,7 +355,7 @@ by_issue %>%
   scale_radius() +
   scale_x_discrete(drop = FALSE) +
   theme_minimal()
-
+ggsave("output/ropensci_events_users_dotplot.png")
 
 ## ----actors-events--------------------------------------------------------------------------------
 by_issue %>% 
@@ -374,7 +369,7 @@ by_issue %>%
        title = "Users involved on the issues and events") +
   scale_x_discrete(drop = FALSE) + 
   scale_size(breaks = c(seq(0, 300, by = 50)))
-
+ggsave("output/ropensci_users_issues.png")
 
 ## ----who------------------------------------------------------------------------------------------
 top_events <- 35
@@ -395,7 +390,7 @@ by_user %>%
        fill = "Events") + 
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
   # coord_flip()
-
+ggsave("output/ropensci_users_events_table.png")
 
 ## ----comments-plot--------------------------------------------------------------------------------
 comments <- init %>%
@@ -421,7 +416,7 @@ comments %>%
   geom_count(aes(author, reviewer)) +
   labs(title = "Comments", x = "Authors", y = "Editor(s)", size = "Issues") +
   theme_minimal() 
-
+ggsave("output/ropensci_comments_authors_editors.png")
 
 ## ----closing--------------------------------------------------------------------------------------
 closed_c <- full %>% 
@@ -449,7 +444,7 @@ aftr %>%
   labs(title = "Comments before and after being closed",
        size = "Issues", x = "Comments after being closed",
        y = "Comments before being closed")
-
+ggsave("output/ropensci_comments_closed_before.png")
 
 ## ----mentions-------------------------------------------------------------------------------------
 mentioned <- init %>% 
@@ -469,7 +464,7 @@ init %>%
   geom_tile(aes(id, fct_reorder(event, n, sum), col = n)) +
   labs(x = "Issue", y = "Event", col = "Times", 
        title = "What do people mentioned?")
-
+ggsave("output/ropensci_people_mentioned.png")
 
 ## ----labels-general-------------------------------------------------------------------------------
 labels <- full %>% 
@@ -508,7 +503,7 @@ labels %>%
   geom_tile(aes(id, label, fill = n)) +
   labs(x = "Issue", y = element_blank(), title = "Labels related to the review process",
        fill = "Times")
-
+ggsave("output/ropensci_stage_issues.png")
 
 ## ----labels_topic---------------------------------------------------------------------------------
 labels %>% 
@@ -519,7 +514,7 @@ labels %>%
   ggplot() +
   geom_tile(aes(id, fct_reorder(label, n, .fun = sum), fill = n)) +
   labs(x = "Issue", y = element_blank(), title = "Topics", fill = "Times")
-
+ggsave("output/ropensci_topics.png")
 
 ## ----topics-freq----------------------------------------------------------------------------------
 labels %>% 
@@ -542,7 +537,7 @@ labels %>%
   ggplot() +
   geom_tile(aes(id, fct_reorder2(label, n, n), fill = n)) +
   labs(x = "Issue", y = element_blank(), title = "Other topics", fill = "Times")
-
+ggsave("output/ropensci_other_topics.png")
 
 ## ----labels-step----------------------------------------------------------------------------------
 labels %>% 
