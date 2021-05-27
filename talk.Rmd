@@ -13,8 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-Anecdote experience, my first submission got approved in 2 days: \
-Advisor: Fast submission \
+Anecdote experience, my first submission got approved in 2 days:\
+Advisor: Fast submission\
 Me: I've been preparing for a while for it (Internally: is this fast?
 )
 
@@ -64,7 +64,7 @@ OS (Unix, Windows, iOs)
 
 ### Human review
 
-Bioc and rOpenSci: Open review on github (people can chime in) \
+Bioc and rOpenSci: Open review on github (people can chime in)\
 CRAN: by email (and ftps site)
 
 ### Reviewers/editors
@@ -123,9 +123,8 @@ Keep: Pass automatic checks
 
 ## Remove
 
-[CRAN](https://cran.r-project.org/web/packages/policies.html): Archived when an ERROR in a new x.y.0 version, without notice \
-[Bioc](https://bioconductor.org/developers/package-end-of-life/): requests to remove or fix before next release.
-\
+[CRAN](https://cran.r-project.org/web/packages/policies.html): Archived when an ERROR in a new x.y.0 version, without notice\
+[Bioc](https://bioconductor.org/developers/package-end-of-life/): requests to remove or fix before next release.\
 [rOpenSci:](https://devguide.ropensci.org/curationpolicy.html?#archivalguidance) On a biannual or annual basis, rOpenSci will review all packages that have been failing for over a month to determine whether to transfer them to the ["ropensci-archive" GitHub organization](https://github.com/ropensci-archive).
 
 ## Closing
