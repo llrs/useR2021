@@ -365,8 +365,13 @@ p2 <- rsubm %>%
 p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 ggsave("output/cran_submission_time.png")
 
+
+new_packages <- cran_submissions %>% 
+  filter(folder == "newbies") %>% 
+  pull(package) %>% 
+  unique()
 p1 <- rsubm %>% 
-  filter(submission_n == 1) %>% 
+  filter(submission_n == 1 & package %in% new_packages) %>% 
   group_by(package,submission_n) %>% 
   summarize(time = median(time)) %>% 
   ggplot() +
@@ -376,7 +381,7 @@ p1 <- rsubm %>%
   scale_x_continuous(expand = expansion()) +
   scale_y_continuous(expand = expansion())
 p2 <- rsubm %>% 
-  filter(submission_n == 1) %>% 
+  filter(submission_n == 1 & package %in% new_packages) %>% 
   group_by(package, submission_n) %>% 
   summarize(time = sum(time)) %>%  
   ggplot() +
