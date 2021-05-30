@@ -109,9 +109,9 @@ reviewers <- function(assigners, unassigners) {
   y <- 0
   n <- sum(ta) - sum(tu)
   reviewers <- vector("character", n)
-  for(reviwer in names(ta)) {
-    x <- ta[reviwer]-tu[reviwer]
-    if (x >= 1 | is.na(x)){
+  for (reviwer in names(ta)) {
+    x <- ta[reviwer] - tu[reviwer]
+    if (x >= 1 | is.na(x)) {
       y <- y + 1
       reviewers[y] <- reviwer
     }
@@ -163,7 +163,21 @@ full %>%
   scale_color_viridis_d() +
   theme(legend.position = "bottom", legend.direction = "horizontal") + 
   guides(colour = guide_legend(nrow = 1), shape = guide_legend(nrow = 1))
-ggsave("output/bioconductor_events.png")
+
+full %>% 
+  filter(event == "created") %>% 
+  mutate(month_year = format(as.Date(created), "%Y-%m")) %>% 
+  group_by(month_year) %>% 
+  count() %>% 
+  ggplot() +
+  geom_col(aes(month_year, n)) +
+  labs(x = "Month", y = "Submissions", 
+     col = "Type", shape = "Type",
+       title = "Bioconductor submissions") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank())
+ggsave("output/bioconductor_submissions.png")
 
 ## ----users_submitting-----------------------------------------------------------------------------
 full %>% 

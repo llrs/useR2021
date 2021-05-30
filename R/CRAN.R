@@ -16,6 +16,7 @@ m <- function(x, y) {
 updates <- Reduce(m, f) # Merge all files (Because the file format changed)
 write.csv(updates, file = "output/cran_till_now.csv",  row.names = FALSE)
 # Clean up
+unlink("static/", recursive = TRUE)
 unlink("output/cransays-history/", recursive = TRUE)
 unlink("output/cransays-history.zip", recursive = TRUE)
 
@@ -59,6 +60,11 @@ packges_multiple_versions <- cran_submissions %>%
   distinct(package) %>% 
   pull(package)
 
+## new packages -------
+new_packages <- cran_submissions %>% 
+  filter(folder == "newbies") %>% 
+  pull(package) %>% 
+  unique()
 
 ## ----package-multiple-folders---------------------------------------------------------------------
 package_multiple <- cran_submissions %>% 
@@ -82,7 +88,7 @@ ggplot(package_multiple) +
        x = element_blank(), y = element_blank())
 ggsave("output/cran_packages_multiple_folders.png")
 
-## ----remove-duplicated-packges-version------------------------------------------------------------
+## ----remove-duplicated-packages-version------------------------------------------------------------
 cran_submissions <- cran_submissions %>% 
   arrange(package, snapshot_time, version, folder) %>% 
   group_by(package, snapshot_time) %>% 
@@ -118,7 +124,7 @@ cran_submissions <- cran_submissions %>%
          submission_n = cumsum(as.numeric(new_version))) %>%
   ungroup() %>% 
   select(-diff_time, -diff_v, -new_version)
-
+saveRDS(cran_submissions, "output/CRAN_data_cleaned.RDS")
 
 ## ----cran-queues----------------------------------------------------------------------------------
 cran_queue <- cran_submissions %>% 
@@ -136,6 +142,24 @@ ggplot(cran_queue) +
   labs(x = element_blank(), y = element_blank(), 
        title = "Packages on CRAN review process")
 ggsave("output/cran_packages_submissions_time.png")
+
+
+cran_submissions %>% 
+  filter(folder == "newbies") %>% 
+  distinct(package, .keep_all = TRUE) %>% 
+  mutate(month_year = format(snapshot_time, "%Y-%m")) %>% 
+  group_by(month_year) %>% 
+  summarize(new = sum(package %in% new_packages & submission_n == 1), 
+            other = n() - new, total = n()) %>% 
+  ggplot() +
+  geom_col(aes(month_year, new)) +
+  labs(x = "Month", y = "Submissions", 
+       col = "Type", shape = "Type",
+       title = "CRAN new submissions") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank())
+ggsave("output/cran_new_submissions.png")
 
 ## ----cran-submissions-----------------------------------------------------------------------------
 man_colors <- RColorBrewer::brewer.pal(8, "Dark2")
@@ -366,10 +390,7 @@ p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 ggsave("output/cran_submission_time.png")
 
 
-new_packages <- cran_submissions %>% 
-  filter(folder == "newbies") %>% 
-  pull(package) %>% 
-  unique()
+
 p1 <- rsubm %>% 
   filter(submission_n == 1 & package %in% new_packages) %>% 
   group_by(package,submission_n) %>% 

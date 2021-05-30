@@ -16,6 +16,24 @@ output:
 
 # Brief introduction
 
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+ros <- readRDS("output/github_rOpenSci_data__cleaned.RDS")
+cran <- readRDS("output/CRAN_data_cleaned.RDS")
+bioc <- readRDS("output/submissions_bioconductor.RDS")
+
+holidays <- data.frame(
+  start = as.POSIXct("18/12/2020", format = "%d/%m/%Y", tz = "UTC"), 
+  end = as.POSIXct("04/01/2021", format = "%d/%m/%Y", tz = "UTC")
+)
+library("tidyverse")
+library("lubridate")
+library("patchwork")
+theme_set(theme_minimal())
+
+```
+
 Goals of a *submission*
 
 - Sharing something of quality that can be useful to others.
@@ -93,17 +111,160 @@ Will use data from the three projects
 # Submissions
 
 
+```{r submissions, echo=FALSE, message=FALSE}
 
+ros_submissions <- ros %>% 
+  ungroup() %>% 
+  filter(event == "created") %>% 
+  mutate(presubmission = grepl("[Pp]re-?[Ss]ubmiss", title)) %>% 
+  filter(!presubmission) %>% 
+  mutate(month_year = format(created, "%Y-%m")) %>% 
+  group_by(month_year) %>% 
+  count() %>% 
+  ggplot() +
+  geom_col(aes(month_year, n)) +
+  labs(x = element_blank(), y = element_blank(), 
+       title = "rOpenSci")
+cran_submissions <- cran %>% 
+  filter(folder == "newbies") %>% 
+  distinct(package, .keep_all = TRUE) %>% 
+  mutate(month_year = format(snapshot_time, "%Y-%m")) %>% 
+  group_by(month_year) %>% 
+  count() %>% 
+  ggplot() +
+  geom_col(aes(month_year, n)) +
+  labs(x = element_blank(), y = element_blank(), 
+       title = "CRAN")
+bioc_submission <- bioc %>% 
+  filter(event == "created") %>% 
+  mutate(month_year = format(as.Date(created), "%Y-%m")) %>% 
+  group_by(month_year) %>% 
+  count() %>% 
+  ggplot() +
+  geom_col(aes(month_year, n)) +
+  labs(x = element_blank(), y = element_blank(), 
+       title = "Bioconductor")
+cran_submissions + bioc_submission + ros_submissions & 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.5, 
+                                   hjust = 1),
+        panel.grid.major.x = element_blank())
+```
 
 ???
 
 Submissions monthly
 
 ---
+# By folder
 
-# Releases/holidays effect
+```{r cran-holidays, show=FALSE}
+man_colors <- RColorBrewer::brewer.pal(8, "Dark2")
+names(man_colors) <- unique(cran$folder)
+cran %>% 
+  group_by(folder, snapshot_time) %>% 
+  summarize(packages = n_distinct(package)) %>% 
+  ggplot() +
+  geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
+            alpha = 0.25, fill = "red") +
+  annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
+           y = 105, label = "CRAN holidays") +
+  geom_path(aes(snapshot_time, packages, col = folder)) +
+  scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "2 weeks", 
+                   expand = expansion()) +
+  scale_y_continuous(expand = expansion()) +
+  scale_color_manual(values = man_colors) +
+  labs(x = element_blank(), y = element_blank(),
+       title = "Packages by folder", col = "Folder") +
+  theme(legend.position = c(0.6, 0.7))
+```
 
 ???
+
+
+---
+
+
+# Holidays effect
+
+```{r cran-holidays-zoom}
+cran %>% 
+  filter(snapshot_time >= holidays$start,
+         snapshot_time <= as.Date("2021/03/07")) %>% 
+  group_by(folder, snapshot_time) %>% 
+  summarize(packages = n_distinct(package)) %>% 
+  ggplot() +
+  geom_path(aes(snapshot_time, packages, col = folder)) +
+  geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
+            alpha = 0.25, fill = "red") +
+  annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
+           y = 105, label = "CRAN holidays") +
+  scale_x_datetime(date_labels = "%m/%d", date_breaks = "1 week", 
+                   expand = expansion()) +
+  scale_y_continuous(expand = expansion(), limits = c(0, NA)) +
+  scale_color_manual(values = man_colors) +
+  labs(x = element_blank(), y = element_blank(),
+       title = "Holidays zoom", col = "Folder") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = c(0.8, 0.7))
+```
+
+
+???
+ 
+ 2 months to get back to normal
+ 
+ 
+---
+# CRAN patterns
+
+.pull-left[
+
+```{r cran-day-month}
+cran_times <- cran %>% 
+  mutate(date = as_date(snapshot_time),
+         week = week(snapshot_time),
+         mday = mday(snapshot_time),
+         wday = wday(snapshot_time, locale = "en_GB.UTF-8"))
+cran_times %>% 
+  arrange(folder, date, mday) %>% 
+  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
+  group_by(folder, date, mday) %>% 
+  summarize(packages = n_distinct(package),
+            week = unique(week)) %>% 
+  group_by(folder, mday) %>% 
+  ggplot() +
+  geom_smooth(aes(mday, packages, col = folder, linetype = folder)) +
+  labs(x = "Day of the month", y = "Packages", col = "Folder", linetype = "Folder",
+       title = "Evolution by month day") +
+  scale_color_manual(values = man_colors) +
+  coord_cartesian(ylim = c(0, NA), xlim = c(1, NA)) +
+  scale_x_continuous(expand = expansion()) +
+  scale_y_continuous(expand = expansion()) 
+```
+
+]
+
+.pull-right[
+
+```{r cran-day-week}
+cran_times %>% 
+  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
+  group_by(folder, date, wday) %>% 
+  summarize(packages = n_distinct(package),
+            week = unique(week)) %>% 
+  group_by(folder, wday) %>% 
+  ggplot() +
+  geom_smooth(aes(wday, packages, col = folder, linetype = folder)) +
+  labs(x = "Day of the week", y = "Packages", col = "Folder", linetype = "Folder",
+       title = "Evolution by week day") +
+  scale_color_manual(values = man_colors) +
+  scale_x_continuous(breaks = 1:7, expand = expansion()) +
+  scale_y_continuous(expand = expansion(), limits = c(0, NA))
+```
+
+]
+
+
 
 ---
 

@@ -40,7 +40,9 @@ get_element <- function(x, name) {
 init <- g2 %>% 
   filter(id != 26) %>%
   mutate(reviewer = vapply(assignee, get_element, name = "user", character(1)),
-         actor = vapply(actor, get_element, name = "user", character(1L)))
+         actor = vapply(actor, get_element, name = "user", character(1L))) %>% 
+  filter(!id %in% c(1:4, 6:8, 16, 14, 49, 84, 135))
+saveRDS(init, file = "output/github_rOpenSci_data__cleaned.RDS")
 
 
 ## ----by-issue-------------------------------------------------------------------------------------
@@ -141,6 +143,24 @@ init %>%
        title = "Issues opened on rOpenSci") +
   theme_minimal()
 ggsave("output/ropensci_issues_time.png")
+
+init %>% 
+  ungroup() %>% 
+  filter(event == "created") %>% 
+  mutate(presubmission = grepl("[Pp]re-?[Ss]ubmiss", title)) %>% 
+  filter(!presubmission) %>% 
+  mutate(month_year = format(created, "%Y-%m")) %>% 
+  group_by(month_year) %>% 
+  count() %>% 
+  ggplot() +
+  geom_col(aes(month_year, n)) +
+  labs(x = "Month", y = "Submissions", 
+       col = "Type", shape = "Type",
+       title = "rOpenSci new submissions") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1.5, vjust = 1.5),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.x = element_blank())
+ggsave("output/ropensci_new_submissions.png")
 
 ## ----by-users-------------------------------------------------------------------------------------
 
