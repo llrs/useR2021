@@ -30,6 +30,7 @@ holidays <- data.frame(
 library("tidyverse")
 library("lubridate")
 library("patchwork")
+library("ggrepel")
 theme_set(theme_minimal())
 
 ```
@@ -264,6 +265,76 @@ cran_times %>%
 
 ]
 
+---
+
+# Review time
+
+```{r cran-review}
+subm <- cran_times %>%
+  group_by(package, submission_n) %>% 
+  arrange(snapshot_time) %>% 
+  select(package, version, submission_n, snapshot_time) %>% 
+  filter(row_number() %in% c(1, last(row_number()))) %>% 
+  arrange(package, submission_n)
+
+rsubm <- subm %>% 
+  filter(n_distinct(snapshot_time) %% 2 == 0) %>%
+  select(-version) %>% 
+  mutate(time = c("start", "end")) %>% 
+  pivot_wider(values_from = snapshot_time, names_from = time) %>% 
+  ungroup() %>% 
+  mutate(r = row_number(), 
+         time  =  round(difftime(end, start, units = "hour"), 0)) %>% 
+  ungroup()
+
+p1 <- rsubm %>% 
+  group_by(package, submission_n) %>% 
+  summarize(time = sum(time)) %>% 
+  ggplot() +
+  geom_histogram(aes(time), bins = 100) +
+  labs(title = "Submission time on queue", x = "Hours", 
+       y = element_blank()) +
+  scale_x_continuous(expand = expansion()) +
+  scale_y_continuous(expand = expansion())
+p2 <- rsubm %>% 
+  group_by(package, submission_n) %>% 
+  summarize(time = sum(time)) %>%  
+  ggplot() +
+  geom_histogram(aes(time), binwidth = 24) +
+  coord_cartesian(xlim = c(0, 24*7)) +
+  labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
+  scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
+  scale_y_continuous(expand = expansion()) +
+  theme(panel.background = element_rect(colour = "white"))
+p1 + inset_element(p2, 0.2, 0.2, 1, 1)
+```
+
+---
+
+# CRAN submission time
+
+```{r cran-submission-time}
+cran_times %>% 
+  group_by(package, submission_n) %>% 
+  summarise(submission_period = difftime(max(snapshot_time), 
+                                         min(snapshot_time), 
+                                         units = "hour"),
+            submission_time = min(snapshot_time)) %>% 
+  ungroup() %>% 
+  filter(submission_period != 0) %>% 
+  ungroup() %>%
+  mutate(d = as.Date(submission_time)) %>%
+  group_by(d) %>% 
+  summarize(m = median(submission_period)) %>% 
+  ggplot() +
+  geom_rect(data = holidays, 
+            aes(xmin = as.Date(start), xmax = as.Date(end)),
+            ymin = 0, ymax = 80, alpha = 0.5, fill = "red") + 
+  geom_smooth(aes(d, m), span = 0.5) +
+  coord_cartesian(ylim = c(0, NA)) +
+  labs(x = "Submission", y = "Daily median time in queue (hours)", 
+       title = "Submission time")
+```
 
 
 ---
@@ -276,6 +347,225 @@ cran_times %>%
 ---
 
 # Editors role
+
+.pull-left[
+
+```{r bioconductor-reviewers}
+trelative <- function(x) {
+  created <- x$created
+  event <- x$event
+  start <- created[event == "created"]
+  k <- event == "closed"
+  if (any(k)) {
+    closing <- created[which.max(k)]
+  } else {
+    closing <- max(created)
+  }
+  
+  o <- difftime(created[!is.na(created)], start, units = "days")
+  as.numeric(o)
+}
+
+reviewers <- function(assigners, unassigners) {
+  ta <- table(assigners)
+  tu <- table(unassigners)
+  y <- 0
+  n <- sum(ta) - sum(tu)
+  reviewers <- vector("character", n)
+  for (reviwer in names(ta)) {
+    x <- ta[reviwer] - tu[reviwer]
+    if (x >= 1 | is.na(x)) {
+      y <- y + 1
+      reviewers[y] <- reviwer
+    }
+  }
+  reviewers
+}
+
+bioc_by_issue <- bioc %>% 
+  group_by(id) %>% 
+  summarize(time_window = difftime(max(created), min(created), units = "days"),
+            events = n(), 
+            diff_users = n_distinct(actor),
+            diff_events = n_distinct(event),
+            Approved = unique(Approved),
+            approved = unique(approved),
+            assignments = sum(event %in% "assigned"),
+            reassigned = any(event %in% "unassigned"),
+            assigners = list(reviewer[event %in% "assigned"]),
+            unassigners = list(reviewer[event %in% "unassigned"]),
+            reviewers = list(reviewers(unlist(assigners, FALSE, FALSE), 
+                                    unlist(unassigners, FALSE, FALSE))),
+            reviewer_comments = sum(event == "commented" & 
+                                      actor %in% unlist(reviewers), na.rm = TRUE),
+            closers = list(actor[event == "closed"]),
+            openers = list(actor[event == "reopened"]),
+            closed = sum(event == "closed") >= sum(event == "reopened") & any(event == "closed"),
+            closer = list(setdiff(unlist(closers, FALSE, FALSE), 
+                                    unlist(openers, FALSE, FALSE))),
+            labels_added = list(label[event == "labeled"]),
+            labels_removed = list(label[event == "unlabeled"]),
+            labels_final = list(setdiff(unlist(labels_added, FALSE, FALSE), 
+                                    unlist(labels_removed, FALSE, FALSE))),
+            check_labels = all(unlist(labels_final, FALSE, FALSE) %in%
+                                 label[event == "created"]),
+            submitter = actor[event == "created"]
+            
+) %>% 
+  mutate(n_reviewers = lengths(reviewers),
+         n_closers = lengths(closer))
+
+bioc_by_issue1 <- bioc %>% 
+  group_by(id) %>% 
+  count(event) %>% 
+  filter(event != "created") %>% 
+  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>%
+  nest_by(.key = "event")
+bioc_by_issue2 <- bioc %>% 
+  group_by(id) %>% 
+  count(actor) %>% 
+  pivot_wider(values_from = n, names_from = actor, values_fill = 0) %>% 
+  nest_by(.key = "actor")
+
+bioc_by_issue <- bioc_by_issue %>% 
+  inner_join(bioc_by_issue1, by = "id") %>% 
+  inner_join(bioc_by_issue2, by = "id")
+
+bioc_by_user0 <- bioc %>%
+  group_by(actor) %>% 
+  summarize(
+    actions = n(),
+    issues_participated = n_distinct(id),
+    issues = list(unique(id)),
+    events_participated = n_distinct(event),
+  ) %>% 
+  mutate(is_reviewer = actor %in% unlist(bioc_by_issue$reviewers, FALSE, FALSE))
+
+bioc_by_user1 <- bioc %>% 
+  group_by(actor) %>% 
+  count(event) %>% 
+  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
+  nest_by(.key = "event")
+bioc_by_user2 <- bioc %>% 
+  group_by(actor) %>% 
+  count(id) %>% 
+  pivot_wider(values_from = n, names_from = id, values_fill = 0) %>% 
+  nest_by(.key = "ids")
+
+bioc_by_user <- bioc_by_user0 %>% 
+  full_join(bioc_by_user1, by = "actor") %>% 
+  full_join(bioc_by_user2, by = "actor")
+
+bioc_by_user %>% 
+  filter(is_reviewer) %>%
+  unnest(event) %>% 
+  filter(commented != 0) %>% 
+  ggplot() + 
+  geom_point(aes(actions, issues_participated)) +
+  geom_text_repel(aes(actions, issues_participated, label = actor)) +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
+  labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
+       title = "Reviewers involvement") +
+  theme_minimal()
+```
+
+]
+
+.pull-right[
+
+```{r ropensci-editors}
+ros_by_issue <- ros %>% 
+  group_by(id) %>% 
+  summarize(time_window = difftime(max(created), min(created), units = "days"),
+            events = n(), 
+            diff_users = n_distinct(actor),
+            diff_events = n_distinct(event),
+            assignments = sum(event %in% "assigned"),
+            reassigned = any(event %in% "unassigned"),
+            assigners = list(reviewer[event %in% "assigned"]),
+            unassigners = list(reviewer[event %in% "unassigned"]),
+            editors = list(reviewers(unlist(assigners, FALSE, FALSE), 
+                                    unlist(unassigners, FALSE, FALSE))),
+            editor_comments = sum(event == "commented" & 
+                                      actor %in% unlist(editors), na.rm = TRUE),
+            closers = list(actor[event == "closed"]),
+            openers = list(actor[event == "reopened"]),
+            closed = sum(event == "closed") >= sum(event == "reopened") & any(event == "closed"),
+            closer = list(setdiff(unlist(closers, FALSE, FALSE), 
+                                    unlist(openers, FALSE, FALSE))),
+            labels_added = list(label[event == "labeled"]),
+            labels_removed = list(label[event == "unlabeled"]),
+            labels_final = list(setdiff(unlist(labels_added, FALSE, FALSE), 
+                                    unlist(labels_removed, FALSE, FALSE))),
+            check_labels = all(unlist(labels_final, FALSE, FALSE) %in%
+                                 label[event == "created"]),
+            submitter = actor[event == "created"]
+            
+) %>% 
+  mutate(n_reviewers = lengths(editors),
+         n_closers = lengths(closer))
+
+ros_by_issue1 <- ros %>% 
+  count(event) %>% 
+  filter(event != "created") %>% 
+  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
+  nest_by(.key = "event")
+ros_by_issue2 <- ros %>% 
+  count(actor) %>% 
+  pivot_wider(values_from = n, names_from = actor, values_fill = 0) %>% 
+  nest_by(.key = "actor")
+
+ros_by_issue <- ros_by_issue %>% 
+  inner_join(ros_by_issue1) %>% 
+  inner_join(ros_by_issue2)
+
+ros_by_user <- ros %>% 
+  group_by(actor) %>% 
+  summarize(
+    actions = n(),
+    issues_participated = n_distinct(id),
+    issues = list(unique(id)),
+    events_participated = n_distinct(event),
+  ) %>% 
+  mutate(is_editor = actor %in% unlist(ros_by_issue$editors, FALSE, FALSE))
+
+ros_by_user1 <- ros %>% 
+  group_by(actor) %>% 
+  count(event) %>% 
+  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
+  nest_by(.key = "event")
+ros_by_user2 <- ros %>% 
+  group_by(actor) %>% 
+  count(id) %>% 
+  pivot_wider(values_from = n, names_from = id, values_fill = 0) %>% 
+  nest_by(.key = "ids")
+
+ros_by_user <- ros_by_user %>% 
+  inner_join(ros_by_user1) %>% 
+  inner_join(ros_by_user2)
+
+
+ros_editors <- ros_by_user %>% 
+  filter(is_editor) %>% 
+  distinct(actor) %>% 
+  pull(actor)
+ros_by_user %>% 
+  filter(is_editor) %>%
+  unnest(event) %>% 
+  filter(commented != 0) %>% 
+  ggplot() + 
+  geom_point(aes(actions, issues_participated)) +
+  geom_text_repel(aes(actions, issues_participated, label = actor)) +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
+  labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
+       title = "Editors involvement") +
+  theme_minimal()
+
+```
+
+]
 
 ???
 
