@@ -461,11 +461,11 @@ bioc_by_user %>%
   unnest(event) %>% 
   filter(commented != 0) %>% 
   ggplot() + 
-  geom_point(aes(actions, issues_participated)) +
-  geom_text_repel(aes(actions, issues_participated, label = actor)) +
+  geom_point(aes(issues_participated, actions)) +
+  geom_text_repel(aes(issues_participated, actions, label = actor)) +
   scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans = "log10") +
-  labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
+  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
        title = "Reviewers involvement") +
   theme_minimal()
 ```
@@ -555,11 +555,11 @@ ros_by_user %>%
   unnest(event) %>% 
   filter(commented != 0) %>% 
   ggplot() + 
-  geom_point(aes(actions, issues_participated)) +
-  geom_text_repel(aes(actions, issues_participated, label = actor)) +
+  geom_point(aes(issues_participated, actions)) +
+  geom_text_repel(aes(issues_participated, actions, label = actor)) +
   scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans = "log10") +
-  labs(size = "Users", col = "Different events", x = "Comments", y = "Issues",
+  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
        title = "Editors involvement") +
   theme_minimal()
 
@@ -569,20 +569,130 @@ ros_by_user %>%
 
 ???
 
+Bioconductor reviewers do a lot
+rOpenSci editors too
 
 ---
 
 ## Reviewers/Other people  role
 
+.pull-left[
+
+```{r users_commenters}
+bioc_by_user %>% 
+  filter(!is_reviewer & actor != "bioc-issue-bot" & !is.na(actor)) %>%
+  unnest(event) %>% 
+  filter(commented != 0) %>% 
+  ggplot() + 
+  geom_count(aes(issues_participated, actions)) +
+  scale_color_viridis_d() + 
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
+  geom_text_repel(aes(issues_participated, actions, label = actor), 
+                data = . %>% filter(issues_participated > 10 | actions > 100)) +
+  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
+       title = "Bioconductor")
+```
+
+]
+
+.pull-right[
+
+```{r ros_comments}
+ros_by_user %>% 
+  filter(!is_editor & actor != "ropensci-review-bot" & !is.na(actor)) %>%
+  unnest(event) %>% 
+  filter(commented != 0) %>% 
+  ggplot() + 
+  geom_count(aes(issues_participated, actions)) +
+  scale_color_viridis_d() + 
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
+  geom_text_repel(aes(issues_participated, actions, label = actor), 
+                data = . %>% filter(issues_participated >= 10 | actions > 100)) +
+  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
+       title = "rOpenSci")
+```
+
+]
 
 ???
 
+Both organizations have a group of users involved on the package review system.
+Even if Bioconductor doesn't explicitly ask for reviewers from the community.
+Bioconductor are considering now how to improve the review system.
+Omitted bots bioc-issue-bot and ropensci-review-bot (new March 2021).
 
 ---
 
 ## Bot role
 
+
+```{r bioc-issue-bot}
+comments <- bioc %>% 
+  ungroup() %>% 
+  filter(event == "commented")
+bioc_bot <- comments %>% 
+  filter(actor == "bioc-issue-bot") %>% 
+  mutate(reason = case_when(
+    startsWith(text, "Hi @") ~ "Received",
+    startsWith(text, "Received a valid push") ~ "Valid push",
+    str_detect(text, "^(\n)?Dear Package contributor,") ~ "Build result",
+    startsWith(text, "A reviewer has been assigned to your package") ~ "Reviewer assigned",
+    str_detect(text, "There is no repository called") ~ "Missing repository",
+    str_detect(text, "Thanks for submitting your additional package") ~ "Additional package",
+    str_detect(text, "has already posted ") ~ "repost",
+    str_detect(text, "for an extended period of time") ~ "Closing",
+    str_detect(text, "DESCRIPTION file") ~ "Unmatch",
+    str_detect(text, "Your package has been approved for building") ~ "Building",
+    str_detect(text, "We only start builds when the `Version`") ~ "Update version",
+    str_detect(text, "fix your version number") ~ "Fix version",
+    str_detect(text, "a GitHub repository URL") ~ "Missing repository",
+    str_detect(text, "more than one GitHub URL") ~ "Multiple repositories",
+    str_detect(text, "Add SSH keys") ~ "SSH key",
+    startsWith(text, "Your package has been accepted.") ~ "Accepted",
+    TRUE ~ "Other"
+  ))
+bioc_bot %>% 
+  group_by(id) %>% 
+  count(reason, sort = TRUE) %>% 
+  ungroup() %>% 
+  ggplot() +
+  geom_tile(aes(id, fct_reorder(reason, n, .fun = sum), col = n)) +
+  scale_color_viridis_c(trans = "log10", expand = expansion()) +
+  labs(x = "Issue", title = "bioc-issue-bot activity", 
+       y = element_blank(), col = "Comments")
+```
+
 ???
+
+Bot provides feedback of many issues and actions performed. 
+Change/adaption with time
+
+---
+
+# Bioc differences
+
+```{r bioc-issue-bot-approved}
+bioc_bot %>% 
+  filter(Approved != "Ongoing") %>% 
+  group_by(id, reason) %>% 
+  summarize(n = n(), Approved = unique(Approved)) %>% 
+  mutate(total = sum(n)) %>% 
+  group_by(id) %>% 
+  mutate(perc = n/total) %>% 
+  filter(reason != "Accepted") %>% 
+  group_by(reason) %>% 
+  filter(n_distinct(Approved) >= 2) %>% 
+  ungroup() %>% 
+  filter(!reason %in% c("Unmatch", "Missing repository", "Building")) %>% 
+  ggplot() +
+  geom_jitter(aes(Approved, n, col = Approved, shape = Approved), height = 0) + 
+  scale_y_continuous(limits = c(0, NA)) +
+  facet_wrap(~reason, ncol = 4, scales = "free_y") +
+  labs(x = element_blank(), y = "Comments", 
+       title = "Diferences between accepted and non accepted issues by bioc-issue-bot comments")
+```
 
 
 ---
