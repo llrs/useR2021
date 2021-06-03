@@ -39,12 +39,12 @@ Goals of a *submission*
 
 - Sharing something of quality that can be useful to others.
 - Make it easier for others to build upon your package.
-- Other: Grant, work, prestige ...
+- Other: work, grant, prestige ...
 
 --
 
 .pull-left[
-**Package reviews systems**
+**Package reviews archives**
 
 - CRAN
 
@@ -59,9 +59,9 @@ Goals of a *submission*
 .pull-right[
 **Objectives of the reviews?**
 
-- Publication quality and a package’s contribution has to be non-trivial.
-- Promote high-quality, well documented, and interoperable software
-- Drive the adoption of best practices with useful, transparent and constructive feedback
+- Non-trivial publication quality packages.
+- Promote high-quality, well documented and interoperable.
+- Drive the adoption of best practices with useful, transparent and constructive feedback.
 ]
 
 
@@ -72,6 +72,8 @@ CRAN: Point errors, comments
 Bioconductor: In detail comment of style, classes, dependencies, structure…
 rOpenSci: guideline for reviewers (about style, tests, functions, description, documentation, …)
 
+
+CRAN ~16000 packages, Bioconductor ~2000,  rOpenSci ~300
 To work with this slides use xaringan::infinite_moon_reader()
 
 ---
@@ -83,7 +85,7 @@ objective <- c("Publication quality and non-trivial",
                "High quality, well documented and interoperable",
                "Drive the adoption of best practices with useful, transparent and constructive feedback")
 upload <- c("tar.gz file", "fill an issue", "fill an issue")
-setup <- c("None", "ssh key, subscribe to mailing list", "None")
+setup <- c("None", "ssh key, subscribe to mailing list", "Setup CI tests")
 checks <- c("check --as-cran", "check; Biocheck", "check --as-cran")
 os <- rep("Windows, Unix, iOS", 3)
 R_versions <- c("oldrel, release, patched, devel", "release, devel", "oldrel, release, devel")
@@ -93,8 +95,8 @@ editors <- c("?", "0", "~10")
 reviewers <- c("?", "~10", "Volunteers")
 df <- data.frame(Objective = objective, Submit = upload,
                  Setup = setup, Checks = checks, OS = os,
-                 Versions = R_versions, 
                  Cycle = cycle,
+                 Versions = R_versions, 
                  Review = review_system,
                  Editors = editors,
                  Reviewers = reviewers)
@@ -163,24 +165,26 @@ man_colors <- RColorBrewer::brewer.pal(8, "Dark2")
 names(man_colors) <- unique(cran$folder)
 cran %>% 
   group_by(folder, snapshot_time) %>% 
-  summarize(packages = n_distinct(package)) %>% 
+  summarize(packages = n_distinct(package), .groups = "drop") %>% 
   ggplot() +
   geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
             alpha = 0.25, fill = "red") +
   annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
            y = 105, label = "CRAN holidays") +
-  geom_path(aes(snapshot_time, packages, col = folder)) +
+  geom_path(aes(snapshot_time, packages, col = folder, linetype = folder)) +
   scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "2 weeks", 
                    expand = expansion()) +
   scale_y_continuous(expand = expansion()) +
   scale_color_manual(values = man_colors) +
   labs(x = element_blank(), y = element_blank(),
-       title = "Packages by folder", col = "Folder") +
+       title = "Packages by folder", col = "Folder", linetype = "Folder") +
   theme(legend.position = c(0.6, 0.7))
 ```
 
 ???
 
+Newbies is where most effort goes/hareder
+Pretest is resubmission (newer versions of packages) and also for newbies
 
 ---
 
@@ -194,7 +198,7 @@ cran %>%
   group_by(folder, snapshot_time) %>% 
   summarize(packages = n_distinct(package)) %>% 
   ggplot() +
-  geom_path(aes(snapshot_time, packages, col = folder)) +
+  geom_path(aes(snapshot_time, packages, col = folder, linetype = folder)) +
   geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
             alpha = 0.25, fill = "red") +
   annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
@@ -204,7 +208,7 @@ cran %>%
   scale_y_continuous(expand = expansion(), limits = c(0, NA)) +
   scale_color_manual(values = man_colors) +
   labs(x = element_blank(), y = element_blank(),
-       title = "Holidays zoom", col = "Folder") +
+       title = "Holidays zoom", col = "Folder", linetype = "Folder") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = c(0.8, 0.7))
 ```
@@ -213,12 +217,12 @@ cran %>%
 ???
  
  2 months to get back to normal
+ First served are the resubmissions of packages
  
  
 ---
 # CRAN patterns
 
-.pull-left[
 
 ```{r cran-day-month}
 cran_times <- cran %>% 
@@ -226,7 +230,7 @@ cran_times <- cran %>%
          week = week(snapshot_time),
          mday = mday(snapshot_time),
          wday = wday(snapshot_time, locale = "en_GB.UTF-8"))
-cran_times %>% 
+cran_dmonth <- cran_times %>% 
   arrange(folder, date, mday) %>% 
   filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(folder, date, mday) %>% 
@@ -241,14 +245,8 @@ cran_times %>%
   coord_cartesian(ylim = c(0, NA), xlim = c(1, NA)) +
   scale_x_continuous(expand = expansion()) +
   scale_y_continuous(expand = expansion()) 
-```
 
-]
-
-.pull-right[
-
-```{r cran-day-week}
-cran_times %>% 
+cran_dweek <- cran_times %>% 
   filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(folder, date, wday) %>% 
   summarize(packages = n_distinct(package),
@@ -261,47 +259,68 @@ cran_times %>%
   scale_color_manual(values = man_colors) +
   scale_x_continuous(breaks = 1:7, expand = expansion()) +
   scale_y_continuous(expand = expansion(), limits = c(0, NA))
+
+cran_dmonth + cran_dweek + plot_layout(guides = 'collect') &
+  guides(colour = guide_legend(nrow = 1, override.aes = list(fill = NA))) &
+  theme(legend.position = "bottom")
 ```
 
-]
 
 ---
 
 # Review time
 
 ```{r cran-review}
-subm <- cran_times %>%
-  group_by(package, submission_n) %>% 
-  arrange(snapshot_time) %>% 
-  select(package, version, submission_n, snapshot_time) %>% 
-  filter(row_number() %in% c(1, last(row_number()))) %>% 
-  arrange(package, submission_n)
-
-rsubm <- subm %>% 
-  filter(n_distinct(snapshot_time) %% 2 == 0) %>%
-  select(-version) %>% 
-  mutate(time = c("start", "end")) %>% 
-  pivot_wider(values_from = snapshot_time, names_from = time) %>% 
-  ungroup() %>% 
-  mutate(r = row_number(), 
-         time  =  round(difftime(end, start, units = "hour"), 0)) %>% 
+submission_folders <- cran_times %>%
+  group_by(package, resubmission_n, submission_n) %>% 
+  count(folder) %>% 
+  pivot_wider(names_from = folder, values_from = n, values_fill = 0) %>% 
   ungroup()
+
+submission_folders_total <- cran_times %>%
+  group_by(package, resubmission_n, submission_n) %>% 
+  count(folder) %>% 
+  summarize(h = sum(n)) %>% 
+  ungroup()
+submissions_times <- cran_times %>% 
+  group_by(package, resubmission_n, submission_n) %>% 
+  summarize(start = min(snapshot_time), end = max(snapshot_time),
+            .groups = "drop") 
+rsubm <- full_join(submission_folders, submission_folders_total) %>% 
+  full_join(submissions_times)
+
+p1 <- rsubm %>% 
+  ggplot() +
+  geom_histogram(aes(h), binwidth = 24) +
+  labs(title = "Time on the ftp site:", x = "Hours", 
+       y = element_blank()) +
+  scale_x_continuous(expand = expansion()) +
+  scale_y_continuous(expand = expansion())
+p2 <- rsubm %>% 
+  filter(h <= 24*7) %>% 
+  ggplot() +
+  geom_histogram(aes(h), binwidth = 24) +
+  labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
+  scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
+  scale_y_continuous(expand = expansion()) +
+  theme(panel.background = element_rect(colour = "white"))
+presubm <- p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 
 p1 <- rsubm %>% 
   group_by(package, submission_n) %>% 
-  summarize(time = sum(time)) %>% 
+  summarise(h = sum(h), .groups = "drop") %>% 
   ggplot() +
-  geom_histogram(aes(time), bins = 100) +
-  labs(title = "Submission time on queue", x = "Hours", 
+  geom_histogram(aes(h), binwidth = 24) +
+  labs(title = "Time on the ftp site:", x = "Hours", 
        y = element_blank()) +
   scale_x_continuous(expand = expansion()) +
   scale_y_continuous(expand = expansion())
 p2 <- rsubm %>% 
   group_by(package, submission_n) %>% 
-  summarize(time = sum(time)) %>%  
+  summarise(h = sum(h), .groups = "drop") %>% 
+  filter(h <= 24*7) %>% 
   ggplot() +
-  geom_histogram(aes(time), binwidth = 24) +
-  coord_cartesian(xlim = c(0, 24*7)) +
+  geom_histogram(aes(h), binwidth = 24) +
   labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
   scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
   scale_y_continuous(expand = expansion()) +
@@ -309,37 +328,100 @@ p2 <- rsubm %>%
 p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 ```
 
+
+```{r submission_qc, eval=FALSE, include=FALSE}
+# Quality check
+rsubm %>% mutate(difff = time-h) %>% select(package, submission_n, time, h, difff) %>% arrange(-difff)
+cran_times %>% filter(package == "rmt") %>% View("rmt") # Same version but several months appart! different submission
+ggplot(rsubm) +
+  geom_count(aes(time, h))
+cran_times %>% 
+  select(submission_n, resubmission_n, package) %>% 
+  distinct() %>% 
+  group_by(submission_n, resubmission_n) %>%
+  count() %>% 
+  ggplot() + 
+  geom_point(aes(submission_n, resubmission_n, size = n))
+# Why there are some gaps on same submission_n but 
+cran_times %>% 
+  select(submission_n, resubmission_n, package) %>% 
+  distinct() %>% 
+  group_by(package, submission_n) %>%
+  summarize(n = max(resubmission_n) - min(resubmission_n) + 1) %>% 
+  ungroup() %>% 
+  group_by(submission_n) %>% 
+  count(n) %>% 
+  ungroup() %>% 
+  ggplot() + 
+  geom_point(aes(submission_n, n, size = nn))
+# Why there are some gaps on same submission_n but 
+```
+
+???
+
+Median time on submissions ~15 hours `r median(rsubm$time)`, mean time ~90 `r mean(rsubm$time)`
+Between 2 and 81 hours (quartiles)
+
 ---
 
 # CRAN submission time
 
 ```{r cran-submission-time}
-cran_times %>% 
+subm_time <- rsubm %>% 
   group_by(package, submission_n) %>% 
-  summarise(submission_period = difftime(max(snapshot_time), 
-                                         min(snapshot_time), 
-                                         units = "hour"),
-            submission_time = min(snapshot_time)) %>% 
-  ungroup() %>% 
-  filter(submission_period != 0) %>% 
-  ungroup() %>%
-  mutate(d = as.Date(submission_time)) %>%
-  group_by(d) %>% 
-  summarize(m = median(submission_period)) %>% 
+  summarize(d = as.Date(min(start)),
+         new = ifelse(any(newbies != 0), "New", "Update"),
+         h = sum(h), .groups = "drop") %>%
+  group_by(d, new) %>% 
+  summarize(m = median(h),
+            n = n()) %>% 
+  filter(d < holidays$start | d > holidays$end)
+subm_time %>% 
   ggplot() +
   geom_rect(data = holidays, 
             aes(xmin = as.Date(start), xmax = as.Date(end)),
-            ymin = 0, ymax = 80, alpha = 0.5, fill = "red") + 
-  geom_smooth(aes(d, m), span = 0.5) +
+            ymin = 0, ymax = 250, alpha = 0.5, fill = "red") + 
+  geom_smooth(aes(d, m, col = new, size = n), span = 0.5) +
+  geom_hline(aes(yintercept = time, col = new), data = . %>% group_by(new) %>% summarise(time = median(m), .groups = "drop"),
+             linetype = "dashed", alpha = 0.5) +
   coord_cartesian(ylim = c(0, NA)) +
   labs(x = "Submission", y = "Daily median time in queue (hours)", 
-       title = "Submission time")
+       title = "Submission time", col = "Submission")
+
+rsubm %>% 
+    group_by(package, submission_n) %>% 
+    summarize(d = as.Date(min(start)),
+              new = ifelse(any(newbies != 0), "New", "Update"),
+              h = sum(h), 
+              across(newbies:recheck, .fns = sum, .names = "{.col}"))
 ```
 
+```{r eval=FALSE, include=FALSE}
+l <- lapply(unique(rsubm$package),
+       function(x){
+         y <- pkgsearch::cran_package_history(x)
+         as_datetime(y$`Date/Publication`)})
+```
+
+
+???
+
+New packages submissions are in ~81h, while resubmissions ~5h
+
+```{r}
+subm_time %>% 
+  group_by(new) %>% 
+  summarise(time = median(m), .groups = "drop")
+```
+
+
+use pkgsearch::cran_package_history("experDesign") for each package to know when a packages was added to CRAN. 
 
 ---
 
 # Comments
+
+How often do people comment and 
 
 ???
 
@@ -671,7 +753,7 @@ Change/adaption with time
 
 ---
 
-# Bioc differences
+# Bioc bot differences
 
 ```{r bioc-issue-bot-approved}
 bioc_bot %>% 
@@ -708,8 +790,14 @@ rOpenSci: around 2 months
 ???
 
 
+rOpenSci: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
 
 ---
+
+# Steps estimation time
+
+---
+
 class: center, middle
 
 

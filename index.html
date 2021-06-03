@@ -32,7 +32,7 @@ class: center, middle, inverse, title-slide
 ## ⚔<br/>xaringan with useR! template
 ### Lluís Revilla
 ### IDIBAPS, CIBEREHD
-### 2021/05/30 (updated: 2021-06-01)
+### 2021/05/30 (updated: 2021-06-03)
 
 ---
 
@@ -45,12 +45,12 @@ Goals of a *submission*
 
 - Sharing something of quality that can be useful to others.
 - Make it easier for others to build upon your package.
-- Other: Grant, work, prestige ...
+- Other: work, grant, prestige ...
 
 --
 
 .pull-left[
-**Package reviews systems**
+**Package reviews archives**
 
 - CRAN
 
@@ -65,9 +65,9 @@ Goals of a *submission*
 .pull-right[
 **Objectives of the reviews?**
 
-- Publication quality and a package’s contribution has to be non-trivial.
-- Promote high-quality, well documented, and interoperable software
-- Drive the adoption of best practices with useful, transparent and constructive feedback
+- Non-trivial publication quality packages.
+- Promote high-quality, well documented and interoperable.
+- Drive the adoption of best practices with useful, transparent and constructive feedback.
 ]
 
 
@@ -78,6 +78,8 @@ CRAN: Point errors, comments
 Bioconductor: In detail comment of style, classes, dependencies, structure…
 rOpenSci: guideline for reviewers (about style, tests, functions, description, documentation, …)
 
+
+CRAN ~16000 packages, Bioconductor ~2000,  rOpenSci ~300
 To work with this slides use xaringan::infinite_moon_reader()
 
 ---
@@ -88,11 +90,11 @@ To work with this slides use xaringan::infinite_moon_reader()
 |          |CRAN                            |Bioconductor                       |rOpenSci               |
 |:---------|:-------------------------------|:----------------------------------|:----------------------|
 |Submit    |tar.gz file                     |fill an issue                      |fill an issue          |
-|Setup     |None                            |ssh key, subscribe to mailing list |None                   |
+|Setup     |None                            |ssh key, subscribe to mailing list |Setup CI tests         |
 |Checks    |check --as-cran                 |check; Biocheck                    |check --as-cran        |
 |OS        |Windows, Unix, iOS              |Windows, Unix, iOS                 |Windows, Unix, iOS     |
-|Versions  |oldrel, release, patched, devel |release, devel                     |oldrel, release, devel |
 |Cycle     |Always open                     |2 annual releases                  |Always open            |
+|Versions  |oldrel, release, patched, devel |release, devel                     |oldrel, release, devel |
 |Review    |email &amp; ftp                     |Github                             |Github                 |
 |Editors   |?                               |0                                  |~10                    |
 |Reviewers |?                               |~10                                |Volunteers             |
@@ -120,6 +122,8 @@ Submissions monthly
 
 ???
 
+Newbies is where most effort goes/hareder
+Pretest is resubmission (newer versions of packages) and also for newbies
 
 ---
 
@@ -132,22 +136,15 @@ Submissions monthly
 ???
  
  2 months to get back to normal
+ First served are the resubmissions of packages
  
  
 ---
 # CRAN patterns
 
-.pull-left[
 
 ![](index_files/figure-html/cran-day-month-1.png)&lt;!-- --&gt;
 
-]
-
-.pull-right[
-
-![](index_files/figure-html/cran-day-week-1.png)&lt;!-- --&gt;
-
-]
 
 ---
 
@@ -155,16 +152,63 @@ Submissions monthly
 
 ![](index_files/figure-html/cran-review-1.png)&lt;!-- --&gt;
 
+
+
+
+???
+
+Median time on submissions ~15 hours , mean time ~90 NA
+Between 2 and 81 hours (quartiles)
+
 ---
 
 # CRAN submission time
 
 ![](index_files/figure-html/cran-submission-time-1.png)&lt;!-- --&gt;
 
+```
+## # A tibble: 9,956 x 12
+## # Groups:   package [6,056]
+##    package   submission_n d          new       h newbies pretest inspect pending
+##    &lt;chr&gt;            &lt;dbl&gt; &lt;date&gt;     &lt;chr&gt; &lt;int&gt;   &lt;int&gt;   &lt;int&gt;   &lt;int&gt;   &lt;int&gt;
+##  1 abess                1 2021-04-13 New      43      37       5       0       0
+##  2 abglasso             1 2021-05-11 New      23      11       0      12       0
+##  3 abn                  1 2020-10-22 Upda…    15       0       0      15       0
+##  4 abn                  2 2020-11-16 Upda…    51       0       0      21      30
+##  5 abn                  3 2021-04-21 Upda…    42       0       7      12      23
+##  6 abtest               1 2020-11-12 Upda…     1       0       1       0       0
+##  7 academic…            1 2021-05-10 New      23      22       0       0       0
+##  8 accucor              1 2021-04-09 New      58      30       2      25       0
+##  9 acebayes             1 2020-10-04 Upda…    22       0       0      22       0
+## 10 aceEditor            1 2020-10-14 New     202     198       3       0       0
+## # … with 9,946 more rows, and 3 more variables: publish &lt;int&gt;, waiting &lt;int&gt;,
+## #   recheck &lt;int&gt;
+```
+
+
+
+
+???
+
+New packages submissions are in ~81h, while resubmissions ~5h
+
+
+```
+## # A tibble: 2 x 2
+##   new     time
+##   &lt;chr&gt;  &lt;dbl&gt;
+## 1 New       81
+## 2 Update     5
+```
+
+
+use pkgsearch::cran_package_history("experDesign") for each package to know when a packages was added to CRAN. 
 
 ---
 
 # Comments
+
+How often do people comment and 
 
 ???
 
@@ -227,7 +271,7 @@ Change/adaption with time
 
 ---
 
-# Bioc differences
+# Bioc bot differences
 
 ![](index_files/figure-html/bioc-issue-bot-approved-1.png)&lt;!-- --&gt;
 
@@ -245,8 +289,14 @@ rOpenSci: around 2 months
 ???
 
 
+rOpenSci: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
 
 ---
+
+# Steps estimation time
+
+---
+
 class: center, middle
 
 
@@ -504,13 +554,13 @@ See the next page for two HTML widgets.
 
 ---
 
-<div id="htmlwidget-8482385234afc46e4016" style="width:100%;height:432px;" class="leaflet html-widget"></div>
-<script type="application/json" data-for="htmlwidget-8482385234afc46e4016">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]}],"setView":[[42.0285,-93.65],17,[]]},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-233ca0a9522341e5b3f4" style="width:100%;height:432px;" class="leaflet html-widget"></div>
+<script type="application/json" data-for="htmlwidget-233ca0a9522341e5b3f4">{"x":{"options":{"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}}},"calls":[{"method":"addTiles","args":["//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",null,null,{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false,"attribution":"&copy; <a href=\"http://openstreetmap.org\">OpenStreetMap<\/a> contributors, <a href=\"http://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA<\/a>"}]}],"setView":[[42.0285,-93.65],17,[]]},"evals":[],"jsHooks":[]}</script>
 
 ---
 
-<div id="htmlwidget-c28d8705da310c382b55" style="width:100%;height:auto;" class="datatables html-widget"></div>
-<script type="application/json" data-for="htmlwidget-c28d8705da310c382b55">{"x":{"filter":"none","fillContainer":false,"data":[["1","2","3","4","5","6","7","8","9","10"],[5.1,4.9,4.7,4.6,5,5.4,4.6,5,4.4,4.9],[3.5,3,3.2,3.1,3.6,3.9,3.4,3.4,2.9,3.1],[1.4,1.4,1.3,1.5,1.4,1.7,1.4,1.5,1.4,1.5],[0.2,0.2,0.2,0.2,0.2,0.4,0.3,0.2,0.2,0.1],["setosa","setosa","setosa","setosa","setosa","setosa","setosa","setosa","setosa","setosa"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Sepal.Length<\/th>\n      <th>Sepal.Width<\/th>\n      <th>Petal.Length<\/th>\n      <th>Petal.Width<\/th>\n      <th>Species<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":8,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[8,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-a2bfad34e7f2bca55fb9" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-a2bfad34e7f2bca55fb9">{"x":{"filter":"none","fillContainer":false,"data":[["1","2","3","4","5","6","7","8","9","10"],[5.1,4.9,4.7,4.6,5,5.4,4.6,5,4.4,4.9],[3.5,3,3.2,3.1,3.6,3.9,3.4,3.4,2.9,3.1],[1.4,1.4,1.3,1.5,1.4,1.7,1.4,1.5,1.4,1.5],[0.2,0.2,0.2,0.2,0.2,0.4,0.3,0.2,0.2,0.1],["setosa","setosa","setosa","setosa","setosa","setosa","setosa","setosa","setosa","setosa"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Sepal.Length<\/th>\n      <th>Sepal.Width<\/th>\n      <th>Petal.Length<\/th>\n      <th>Petal.Width<\/th>\n      <th>Species<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":8,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[8,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
 
 ---
 

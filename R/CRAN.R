@@ -75,18 +75,7 @@ package_multiple <- cran_submissions %>%
   filter(n != 1) %>% 
   summarise(n = sum(nn)) %>% 
   ungroup()
-ggplot(package_multiple) +
-  geom_point(aes(snapshot_time, n), size = 1) +
-  geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 6),
-            alpha = 0.25, fill = "red") +
-  annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
-           y = 3.5, label = "CRAN holidays") +
-  scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "2 weeks", 
-                   expand = expansion()) +
-  scale_y_continuous(expand = expansion()) +
-  labs(title = "Packages in multiple folders and subfolders", 
-       x = element_blank(), y = element_blank())
-ggsave("output/cran_packages_multiple_folders.png")
+
 
 ## ----remove-duplicated-packages-version------------------------------------------------------------
 cran_submissions <- cran_submissions %>% 
@@ -118,13 +107,33 @@ cran_submissions <- cran_submissions %>%
          diff_time = if_else(is.na(diff_time), diff0, diff_time), # Fill NAs
          diff_v = version != lag(version),
          diff_v = ifelse(is.na(diff_v), TRUE, diff_v), # Fill NAs
-         new_version = !near(diff_time, 1, tol = 24) & diff_v, 
+         near_t = near(diff_time, 1, tol = 24),
+         resubmission = !near_t | diff_v, 
+         resubmission = if_else(resubmission == FALSE & diff_time == 0, 
+                               TRUE, resubmission),
+         resubmission_n = cumsum(as.numeric(resubmission)),
+         new_version = !near_t & diff_v, 
          new_version = if_else(new_version == FALSE & diff_time == 0, 
                                TRUE, new_version),
          submission_n = cumsum(as.numeric(new_version))) %>%
   ungroup() %>% 
-  select(-diff_time, -diff_v, -new_version)
+  select(-diff_time, -diff_v, -new_version, -resubmission)
 saveRDS(cran_submissions, "output/CRAN_data_cleaned.RDS")
+
+
+ggplot(package_multiple) +
+  geom_point(aes(snapshot_time, n), size = 1) +
+  geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 6),
+            alpha = 0.25, fill = "red") +
+  annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
+           y = 3.5, label = "CRAN holidays") +
+  scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "2 weeks", 
+                   expand = expansion()) +
+  scale_y_continuous(expand = expansion()) +
+  labs(title = "Packages in multiple folders and subfolders", 
+       x = element_blank(), y = element_blank())
+ggsave("output/cran_packages_multiple_folders.png")
+
 
 ## ----cran-queues----------------------------------------------------------------------------------
 cran_queue <- cran_submissions %>% 
