@@ -1,9 +1,9 @@
 ---
 title: "Reviewing packages; how does it work?"
-subtitle: "⚔<br/>xaringan with useR! template"
-author: "[Lluís Revilla](https://llrs.dev) @[Lluis_Revilla](https://twitter.com/Lluis_Revilla) "
-institute: "IDIBAPS, CIBEREHD"
-date: "2021/05/30"
+author: '[Lluís Revilla](https://llrs.dev) <br>
+ [`r icons::fontawesome("square", "regular")`](https://user2021.llrs.dev) 
+  [`r icons::fontawesome("github")`](https://github.com/llrs/) 
+ [`r icons::fontawesome("twitter")`Lluis_Revilla](https://twitter.com/Lluis_Revilla) '
 output:
   xaringan::moon_reader:
     css: ["useR", "useR-fonts"]
@@ -17,14 +17,45 @@ output:
 # Brief introduction
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.align="center")
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.align="center", fig.asp=0.618, fig.height=10, fig.retina=3)
 
 library("tidyverse")
 library("lubridate")
 library("patchwork")
 library("ggrepel")
 theme_set(theme_minimal())
+# https://pkg.garrickadenbuie.com/xaringanExtra/#/slide-tone
+xaringanExtra::use_slide_tone()
+# Icons from: https://github.com/mitchelloharawild/icons
 ```
+
+
+```{r metathis, echo=FALSE}
+# https://www.garrickadenbuie.com/blog/sharing-xaringan-slides/
+library(metathis)
+meta() %>%
+  meta_name("github-repo" = "llrs/user2021") %>% 
+  meta_social(
+    title = "Reviewing packages; how does it work?",
+    description = paste(
+      "Analysis and tips about how package reviews work.",
+      "Presented at useR!2021."
+    ),
+    url = "https://user2021.llrs.dev",
+    image = "https://llrs.dev/2020/07/bioconductor-submissions-reviews/index_files/figure-html/first_plot-1.png",
+    image_alt = paste(
+      "Image from a blog https://llrs.dev/2020/07/bioconductor-submissions-reviews/ for Reviewing packages; how does it work?", 
+      "Horizontal axis the date, vertical axis the submissions on Bioconductor each point is an event on a submission. It shows a continous increase on packages submitted.", 
+      "Presented at useR!2021 by Lluís Revilla"
+    ),
+    og_type = "website",
+    og_author = "Lluís Revilla",
+    twitter_card_type = "summary_large_image",
+    twitter_creator = "@Lluis_Revilla",
+    twitter_site = "@Lluis_Revilla"
+  )
+```
+
 
 ```{r init, cache=TRUE}
 ros <- readRDS("output/github_rOpenSci_data__cleaned.RDS")
@@ -154,10 +185,9 @@ ros_submissions <- ros %>%
   labs(x = element_blank(), y = element_blank(), 
        title = "rOpenSci")
 cran_submissions + bioc_submission + ros_submissions & 
-  scale_x_datetime(date_labels = "%y/%m", date_breaks = "3 months", 
+  scale_x_datetime(date_labels = "%y/%m", date_breaks = "4 months", 
                    expand = expansion()) &
-  theme(axis.text.x = element_text(angle = 45, vjust = 1.5, 
-                                   hjust = 1),
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
         panel.grid.major.x = element_blank())
 ```
 
@@ -168,7 +198,7 @@ Submissions monthly
 ---
 # By folder
 
-```{r cran-holidays, show=FALSE}
+```{r cran-holidays, fig.height=5}
 man_colors <- RColorBrewer::brewer.pal(8, "Dark2")
 names(man_colors) <- unique(cran$folder)
 cran %>% 
@@ -179,15 +209,16 @@ cran %>%
   geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
             alpha = 0.25, fill = "red") +
   annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
-           y = 105, label = "CRAN holidays") +
+           y = 125, label = "CRAN holidays") +
   geom_path(aes(snapshot_time, packages, col = folder, linetype = folder)) +
-  scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "1 month", 
+  scale_x_datetime(date_labels = "%m/%d", date_breaks = "2 weeks", 
                    expand = expansion()) +
   scale_y_continuous(expand = expansion()) +
   scale_color_manual(values = man_colors) +
   labs(x = element_blank(), y = element_blank(),
        title = "Packages by folder", col = "Folder", linetype = "Folder") +
-  theme(legend.position = c(0.6, 0.7))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = c(0.6, 0.7))
 ```
 
 [CRAN incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html)
@@ -200,20 +231,16 @@ Pretest is resubmission (newer versions of packages) and also for newbies
 ---
 
 
-# Holidays effect
+# Workload after holidays
 
 ```{r cran-holidays-zoom}
 cran %>% 
-  filter(snapshot_time >= holidays$start,
+  filter(snapshot_time >= holidays$end,
          folder %in% c("newbies", "pretest")) %>%
   group_by(folder, snapshot_time) %>% 
   summarize(packages = n_distinct(package)) %>% 
   ggplot() +
   geom_path(aes(snapshot_time, packages, col = folder, linetype = folder)) +
-  geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
-            alpha = 0.25, fill = "red") +
-  annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
-           y = 105, label = "CRAN holidays") +
   scale_x_datetime(date_labels = "%m/%d", date_breaks = "1 week", 
                    expand = expansion()) +
   scale_y_continuous(expand = expansion(), limits = c(0, NA)) +
@@ -232,7 +259,7 @@ cran %>%
  
 ---
 
-# CRAN patterns
+# Submissions patterns
 
 ```{r cran-day-month}
 cran_times <- cran %>% 
@@ -309,31 +336,14 @@ submissions_times <- cran_times %>%
             .groups = "drop") 
 rsubm <- full_join(submission_folders, submission_folders_total) %>% 
   full_join(submissions_times)
-# 
-# p1 <- rsubm %>% 
-#   ggplot() +
-#   geom_histogram(aes(h), binwidth = 24) +
-#   labs(title = "Time on the ftp site:", x = "Hours", 
-#        y = element_blank()) +
-#   scale_x_continuous(expand = expansion()) +
-#   scale_y_continuous(expand = expansion())
-# p2 <- rsubm %>% 
-#   filter(h <= 24*7) %>% 
-#   ggplot() +
-#   geom_histogram(aes(h), binwidth = 24) +
-#   labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
-#   scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
-#   scale_y_continuous(expand = expansion()) +
-#   theme(panel.background = element_rect(colour = "white"))
-# presubm <- p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 
 p1 <- rsubm %>% 
   group_by(package, submission_n) %>% 
   summarise(h = sum(h), .groups = "drop") %>% 
   ggplot() +
   geom_histogram(aes(h), binwidth = 24) +
-  labs(title = "Time on the ftp site:", x = "Hours", 
-       y = element_blank()) +
+  labs(title = element_blank(), x = "Hours", 
+       y = "Submissions") +
   scale_x_continuous(expand = expansion()) +
   scale_y_continuous(expand = expansion())
 p2 <- rsubm %>% 
@@ -341,15 +351,16 @@ p2 <- rsubm %>%
   summarise(h = sum(h), .groups = "drop") %>% 
   filter(h <= 24*7) %>% 
   ggplot() +
-  geom_histogram(aes(h), binwidth = 24) +
-  labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
-  scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
+  geom_histogram(aes(h), binwidth = 24, boundary = 0.5) +
+  labs(subtitle = "Zoom", x = "Hours", y =  "Submissions") +
+  scale_x_continuous(expand = expansion(), breaks = seq(24, 24*8, by = 24)) +
   scale_y_continuous(expand = expansion()) +
-  theme(panel.background = element_rect(colour = "white"))
+  theme(panel.background = element_rect(colour = "white"),
+        panel.grid.minor.x = element_blank())
 p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 ```
 
-Short reviews
+Short, brief, to the point reviews
 
 ???
 
@@ -358,7 +369,7 @@ Between 2 and 81 hours (quartiles)
 
 ---
 
-# CRAN submission time
+# Review speed 
 
 ```{r cran-submission-time}
 subm_time <- rsubm %>% 
@@ -375,12 +386,18 @@ subm_time %>%
   geom_rect(data = holidays, 
             aes(xmin = as.Date(start), xmax = as.Date(end)),
             ymin = 0, ymax = 250, alpha = 0.5, fill = "red") + 
+  annotate("text", x = as.Date(holidays$start + (holidays$end - holidays$start)/2),
+  y = 150, label = "CRAN holidays") +
   geom_smooth(aes(d, m, col = new, size = n), span = 0.5) +
+  scale_x_date(date_labels = "%m/%d", date_breaks = "1 month", 
+                   expand = expansion()) +
   geom_hline(aes(yintercept = time, col = new), data = . %>% group_by(new) %>% summarise(time = median(m), .groups = "drop"),
              linetype = "dashed", alpha = 0.5) +
   coord_cartesian(ylim = c(0, NA)) +
-  labs(x = "Submission", y = "Daily median time in queue (hours)", 
-       title = "Submission time", col = "Submission")
+  scale_color_viridis_d() +
+  labs(x = "Submission date", y = "Hours", 
+       title = element_blank(), col = "Submission") +
+  theme(legend.position = c(0.8, 0.7))
 ```
 
 Expect 3-7 days till your new package is on CRAN.
@@ -537,9 +554,7 @@ ros_by_issue <- ros_by_issue %>%
 
 ---
 
-# Editors role
-
-.pull-left[
+# Users role
 
 ```{r bioconductor-reviewers}
 bioc_by_user0 <- bioc %>%
@@ -567,23 +582,19 @@ bioc_by_user <- bioc_by_user0 %>%
   full_join(bioc_by_user1, by = "actor") %>% 
   full_join(bioc_by_user2, by = "actor")
 
-bioc_by_user %>% 
-  filter(is_reviewer) %>%
+bioc_users_plot <- bioc_by_user %>% 
+  filter(actor != "bioc-issue-bot" & !is.na(actor)) %>%
   unnest(event) %>% 
   filter(commented != 0) %>% 
   ggplot() + 
-  geom_point(aes(issues_participated, actions)) +
-  geom_text_repel(aes(issues_participated, actions, label = actor)) +
+  geom_count(aes(issues_participated, actions, col = is_reviewer, shape = is_reviewer)) +
   scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans = "log10") +
-  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
-       title = "Reviewers involvement") +
+  labs(size = "Users", col = "Reviewer?", y = "Actions", 
+       x = "Issues", shape = "Reviewer?",
+       title = "Users involvement") +
   theme_minimal()
 ```
-
-]
-
-.pull-right[
 
 ```{r ropensci-editors}
 ros_by_user <- ros %>% 
@@ -616,74 +627,35 @@ ros_editors <- ros_by_user %>%
   filter(is_editor) %>% 
   distinct(actor) %>% 
   pull(actor)
-ros_by_user %>% 
-  filter(is_editor) %>%
+ros_users_plot <- ros_by_user %>% 
+  filter(actor != "ropensci-reviewer-bot" & !is.na(actor)) %>%
   unnest(event) %>% 
   filter(commented != 0) %>% 
   ggplot() + 
-  geom_point(aes(issues_participated, actions)) +
-  geom_text_repel(aes(issues_participated, actions, label = actor)) +
+  geom_count(aes(issues_participated, actions, col = is_editor, shape = is_editor)) +
   scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans = "log10") +
   labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
-       title = "Editors involvement") +
+       title = "rOpenSci") +
   theme_minimal()
 
 ```
 
-]
+
+```{r users-plots}
+(bioc_users_plot + ros_users_plot &
+   guides(col = FALSE, shape = FALSE) &
+   scale_color_viridis_d() &
+   scale_y_continuous(limits = c(1, 10000), trans = "log10") &
+   scale_size(limits = c(1, 40))) +
+  plot_layout(guides = "collect")
+```
+
 
 ???
 
 Bioconductor reviewers do a lot
 rOpenSci editors too
-
----
-
-# Reviewers/Other people  role
-
-.pull-left[
-
-```{r users_commenters}
-bioc_by_user %>% 
-  filter(!is_reviewer & actor != "bioc-issue-bot" & !is.na(actor)) %>%
-  unnest(event) %>% 
-  filter(commented != 0) %>% 
-  ggplot() + 
-  geom_count(aes(issues_participated, actions)) +
-  scale_color_viridis_d() + 
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  geom_text_repel(aes(issues_participated, actions, label = actor), 
-                data = . %>% filter(issues_participated > 10 | actions > 100)) +
-  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
-       title = "Bioconductor")
-```
-
-]
-
-.pull-right[
-
-```{r ros_comments}
-ros_by_user %>% 
-  filter(!is_editor & actor != "ropensci-review-bot" & !is.na(actor)) %>%
-  unnest(event) %>% 
-  filter(commented != 0) %>% 
-  ggplot() + 
-  geom_count(aes(issues_participated, actions)) +
-  scale_color_viridis_d() + 
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  geom_text_repel(aes(issues_participated, actions, label = actor), 
-                data = . %>% filter(issues_participated >= 10 | actions > 100)) +
-  labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
-       title = "rOpenSci")
-```
-
-]
-
-???
-
 Both organizations have a group of users involved on the package review system.
 Even if Bioconductor doesn't explicitly ask for reviewers from the community.
 Bioconductor are considering now how to improve the review system.
@@ -702,7 +674,7 @@ bioc_author_reviewer_comments <- bioc_by_issue %>%
   filter(!(author_comments == 0 & reviewer_comments == 0)) %>% 
   ggplot() +
   geom_count(aes(author_comments, reviewer_comments)) +
-  labs(size = "Issues", x = "Authors", y = "Reviwers", title = "Comments")
+  labs(size = "Issues", x = "Authors", y = "Reviwers", title = element_blank())
 
 bioc_auth_other_comments <- bioc_by_issue %>% 
   select(id, comments, 
@@ -711,7 +683,7 @@ bioc_auth_other_comments <- bioc_by_issue %>%
   filter(!(author_comments == 0 & reviewer_comments == 0)) %>% 
   ggplot() +
   geom_count(aes(author_comments, comments - reviewer_comments - bot_comments - author_comments)) +
-  labs(size = "Issues", x = "Authors", y = "Other", title = "Comments")
+  labs(size = "Issues", x = "Authors", y = "Other", title = element_blank())
 
 ros_author_editor_comments <- ros_by_issue %>% 
   select(id, comments, 
@@ -720,7 +692,7 @@ ros_author_editor_comments <- ros_by_issue %>%
   filter(!(author_comments == 0 & editor_comments == 0)) %>% 
   ggplot() +
   geom_count(aes(author_comments, editor_comments)) +
-  labs(size = "Issues", x = "Authors", y = "Editors", title = "Comments")
+  labs(size = "Issues", x = "Authors", y = "Editors", title = element_blank())
 
 ros_auth_other_comments <- ros_by_issue %>% 
   select(id, comments, 
@@ -729,10 +701,12 @@ ros_auth_other_comments <- ros_by_issue %>%
   filter(!(author_comments == 0 & editor_comments == 0)) %>% 
   ggplot() +
   geom_count(aes(author_comments, comments - editor_comments - bot_comments - author_comments)) +
-  labs(size = "Issues", x = "Authors", y = "Reviewers & other", title = "Comments")
+  labs(size = "Issues", x = "Authors", y = "Reviewers & other", title = element_blank())
 
-(bioc_author_reviewer_comments + bioc_auth_other_comments) /
-  (ros_author_editor_comments + ros_auth_other_comments)
+((bioc_author_reviewer_comments + ros_author_editor_comments) /
+  ( bioc_auth_other_comments + ros_auth_other_comments) & 
+    scale_size(limits = c(1, 60))) +
+  plot_layout(guides = "collect")
 ```
 
 
@@ -741,9 +715,7 @@ ros_auth_other_comments <- ros_by_issue %>%
 
 ---
 
-
 # Bot role
-
 
 ```{r bioc-issue-bot}
 comments <- bioc %>% 
@@ -758,7 +730,7 @@ bioc_bot <- comments %>%
     startsWith(text, "A reviewer has been assigned to your package") ~ "Reviewer assigned",
     str_detect(text, "There is no repository called") ~ "Missing repository",
     str_detect(text, "Thanks for submitting your additional package") ~ "Additional package",
-    str_detect(text, "has already posted ") ~ "repost",
+    str_detect(text, "has already posted ") ~ "Repost",
     str_detect(text, "for an extended period of time") ~ "Closing",
     str_detect(text, "DESCRIPTION file") ~ "Unmatch",
     str_detect(text, "Your package has been approved for building") ~ "Building",
@@ -882,7 +854,7 @@ l <- lapply(unique(rsubm$package),
 
 # Submit ?
 
-.pull-left[
+.left[
 - Prepare
 
 - Fix
@@ -890,7 +862,7 @@ l <- lapply(unique(rsubm$package),
 - Resubmit
 ]
 
-.pull-right[
+.right[
 **Thanks**
 
 R core and CRAN team
