@@ -18,7 +18,9 @@ output:
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.align="center", fig.asp=0.618, fig.height=10, fig.retina=3)
-
+# Change ratio of screen with
+#   nature:
+#      ratio: 9:1 
 library("tidyverse")
 library("lubridate")
 library("patchwork")
@@ -45,14 +47,13 @@ meta() %>%
     image = "https://llrs.dev/2020/07/bioconductor-submissions-reviews/index_files/figure-html/first_plot-1.png",
     image_alt = paste(
       "Image from a blog https://llrs.dev/2020/07/bioconductor-submissions-reviews/ for Reviewing packages; how does it work?", 
-      "Horizontal axis the date, vertical axis the submissions on Bioconductor each point is an event on a submission. It shows a continous increase on packages submitted.", 
+      "Horizontal axis the date, vertical axis the submissions on Bioconductor each point is an event on a submission. It shows a continuous increase on packages submitted.", 
       "Presented at useR!2021 by Lluís Revilla"
     ),
     og_type = "website",
     og_author = "Lluís Revilla",
-    twitter_card_type = "summary_large_image",
-    twitter_creator = "@Lluis_Revilla",
-    twitter_site = "@Lluis_Revilla"
+    twitter_card_type = "summary",
+    twitter_creator = "@Lluis_Revilla"
   )
 ```
 
