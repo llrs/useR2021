@@ -111,11 +111,15 @@ To work with this slides use xaringan::infinite_moon_reader()
 |Editors   |0                               |0                          |~10                    |
 |Reviewers |~5                              |~10                        |Volunteers             |
 
+[CRAN](https://cran.r-project.org/submit.html)  [Bioconductor](https://github.com/Bioconductor/Contributions/) 
+[rOpenSci](https://github.com/ropensci/software-review/)
+
 ???
 
 The different projects/archives have different setups.
-Will use data from the three projects
-All of them first you need to pass the automatic checks before a human looks into it.
+*Read the table*
+Will use data from the three projects but mostly refer to CRAN.
+All of them first you need to pass the automatic checks in place before a human looks into it.
 
 ---
 
@@ -124,20 +128,25 @@ All of them first you need to pass the automatic checks before a human looks int
 
 &lt;img src="index_files/figure-html/submissions-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
+CRAN data thanks to the [incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html).
+
 ???
 
-Submissions monthly
+One order of magnitude of difference between each other CRAN &gt; Bioconductor &gt; rOpenSci
+Many variability on month
+Also very few data from CRAN 
 
 ---
-# By folder
+# Organization
 
 &lt;img src="index_files/figure-html/cran-holidays-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
-[CRAN incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html)
+Packages are moved by reviewers between folders.
 
 ???
 
-Newbies is where most effort goes/harder
+Many folders but these two are the most important.
+There isn't an explanation from CRAN about how do they work.
 Pretest is resubmission (newer versions of packages) and also for newbies
 
 ---
@@ -147,11 +156,12 @@ Pretest is resubmission (newer versions of packages) and also for newbies
 
 &lt;img src="index_files/figure-html/cran-holidays-zoom-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
+Big volume of work! Patience!
 
 ???
  
- 2 months to get back to normal
- First served are the resubmissions of packages
+2 months to get back to normal for new packages.
+First served are the resubmissions of packages.
  
 ---
 
@@ -159,12 +169,11 @@ Pretest is resubmission (newer versions of packages) and also for newbies
 
 &lt;img src="index_files/figure-html/cran-day-month-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
-Check before submitting?
+Check [dashboard](https://lockedata.github.io/cransays/articles/dashboard.html) before submitting?
 
 ???
 
-temporal patterns  on review??
-How much is a lot?
+Submit when you are ready, better be on the queue than outside.
 
 ---
 
@@ -172,7 +181,7 @@ How much is a lot?
 
 &lt;img src="index_files/figure-html/cran-review-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
-Short, brief, to the point reviews
+Reviews are short, brief and to the point.
 
 ???
 
@@ -188,6 +197,10 @@ Between 2 and 81 hours (quartiles)
 Expect 3-7 days till your new package is on CRAN.
 
 ???
+
+Different time, can be shorter or longer.
+Most longer need resubmission.
+Resubmit with different version (makes it easier to track how many are).
 
 
 ```
@@ -214,6 +227,7 @@ Expect 3-7 days till your new package is on CRAN.
 
 &lt;img src="index_files/figure-html/users-plots-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
+Some users help with many reviews.
 
 ???
 
@@ -230,9 +244,11 @@ Omitted bots bioc-issue-bot and ropensci-review-bot (new March 2021).
 
 &lt;img src="index_files/figure-html/comments-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
+A dialog between authors and reviewers &amp; editors. 
 
 ???
 
+Non reviewers users on bioconductor still chime in to help.
 
 ---
 
@@ -240,10 +256,13 @@ Omitted bots bioc-issue-bot and ropensci-review-bot (new March 2021).
 
 &lt;img src="index_files/figure-html/bioc-issue-bot-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
+Bot helps on the process and changes with the process
+
 ???
 
 Bot provides feedback of many issues and actions performed. 
-Change/adaption with time
+It can be changed/adapted to change in requirements or errors.
+rOpenSci is going to have a bot too [ropensci-review-bot](https://github.com/ropensci-review-bot/). 
 
 ---
 
@@ -251,10 +270,16 @@ Change/adaption with time
 
 &lt;img src="index_files/figure-html/labels-1.png" width="504" style="display: block; margin: auto;" /&gt;
 
+Labels are used to indicate progress on the submission.
+
+???
+
+On bioconductor most problems with the submissions are not the package itself but not replying or chosing another venue.
+rOpenSci provides more detailed questioning for scope of a package.
 
 ---
 
-# Timeline for submissions
+# Success submissions
 
 CRAN: Not easy way to know
 
@@ -262,8 +287,12 @@ Bioconductor: 1 month
 
 rOpenSci: around 2 months
 
+
 ???
 
+CRAN:
+Bioconductor: most of them in 1 month
+rOpenSci: in 2 months (seeking 2 reviwers and posting them).
 
 
 
@@ -271,28 +300,37 @@ rOpenSci: around 2 months
 
 # Submit ?
 
-.left[
 - Prepare
+  
+  Follow policies and guidelines: [CRAN](https://cran.r-project.org/web/packages/policies.html), [Bioconductor](https://www.bioconductor.org/developers/package-submission/), [rOpenSci](https://devguide.ropensci.org/).
 
-- Fix
+- **Fix**
 
 - Resubmit
+
 ]
 
-.right[
-**Thanks**
+.center[
+
+# Thanks
 
 R core and CRAN team
 Bioconductor core, 
 rOpenSci editors and reviewers
+
 ]
+
+.center[
 
 .bottom[
+
 ***Questions ?***
+
 ]
 
+]
 ???
-Bioconductor package submission
+
 rOpenSci review: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
