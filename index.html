@@ -3,7 +3,7 @@
   <head>
     <title>Reviewing packages; how does it work?</title>
     <meta charset="utf-8" />
-    <meta name="author" content="Lluís Revilla" />
+    <meta name="author" content="Lluís Revilla @Lluis_Revilla" />
     <script src="index_files/header-attrs-2.8/header-attrs.js"></script>
     <link href="index_files/remark-css-0.0.1/useR.css" rel="stylesheet" />
     <link href="index_files/remark-css-0.0.1/useR-fonts.css" rel="stylesheet" />
@@ -14,14 +14,17 @@ class: center, middle, inverse, title-slide
 
 # Reviewing packages; how does it work?
 ## ⚔<br/>xaringan with useR! template
-### Lluís Revilla
+### <a href="https://llrs.dev">Lluís Revilla</a> @<a href="https://twitter.com/Lluis_Revilla">Lluis_Revilla</a>
 ### IDIBAPS, CIBEREHD
-### 2021/05/30 (updated: 2021-06-03)
+### 2021/05/30
 
 ---
 
 
 # Brief introduction
+
+
+
 
 
 
@@ -31,10 +34,15 @@ Goals of a *submission*
 - Make it easier for others to build upon your package.
 - Other: work, grant, prestige ...
 
+???
+
+Submissions are though specially if coming from places with poor training
+Lack of confidence/experience with reviews.
+
 --
 
 .pull-left[
-**Package reviews archives**
+**Archives reviewing packages**
 
 - CRAN
 
@@ -71,29 +79,30 @@ To work with this slides use xaringan::infinite_moon_reader()
 # Project differences
 
 
-|          |CRAN                            |Bioconductor                       |rOpenSci               |
-|:---------|:-------------------------------|:----------------------------------|:----------------------|
-|Submit    |tar.gz file                     |fill an issue                      |fill an issue          |
-|Setup     |None                            |ssh key, subscribe to mailing list |Setup CI tests         |
-|Checks    |check --as-cran                 |check; Biocheck                    |check --as-cran        |
-|OS        |Windows, Unix, iOS              |Windows, Unix, iOS                 |Windows, Unix, iOS     |
-|Cycle     |Always open                     |2 annual releases                  |Always open            |
-|Versions  |oldrel, release, patched, devel |release, devel                     |oldrel, release, devel |
-|Review    |email &amp; ftp                     |Github                             |Github                 |
-|Editors   |?                               |0                                  |~10                    |
-|Reviewers |?                               |~10                                |Volunteers             |
+|          |CRAN                            |Bioconductor               |rOpenSci               |
+|:---------|:-------------------------------|:--------------------------|:----------------------|
+|Submit    |tar.gz file                     |fill an issue              |fill an issue          |
+|Review    |email &amp; ftp                     |Github                     |Github                 |
+|Setup     |None                            |ssh key, subscribe mailing |CI tests               |
+|Checks    |check --as-cran                 |check; Biocheck            |check --as-cran        |
+|OS        |Windows, Unix, iOS              |Windows, Unix, iOS         |Windows, Unix, iOS     |
+|Versions  |oldrel, release, patched, devel |release, devel             |oldrel, release, devel |
+|Cycle     |Always open                     |2 annual releases          |Always open            |
+|Editors   |0                               |0                          |~10                    |
+|Reviewers |~5                              |~10                        |Volunteers             |
 
 ???
 
 The different projects/archives have different setups.
 Will use data from the three projects
+All of them first you need to pass the automatic checks before a human looks into it.
 
 ---
 
 # Submissions
 
 
-![](index_files/figure-html/submissions-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/submissions-1.png" style="display: block; margin: auto;" /&gt;
 
 ???
 
@@ -102,11 +111,13 @@ Submissions monthly
 ---
 # By folder
 
-![](index_files/figure-html/cran-holidays-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/cran-holidays-1.png" style="display: block; margin: auto;" /&gt;
+
+[CRAN incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html)
 
 ???
 
-Newbies is where most effort goes/hareder
+Newbies is where most effort goes/harder
 Pretest is resubmission (newer versions of packages) and also for newbies
 
 ---
@@ -114,7 +125,7 @@ Pretest is resubmission (newer versions of packages) and also for newbies
 
 # Holidays effect
 
-![](index_files/figure-html/cran-holidays-zoom-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/cran-holidays-zoom-1.png" style="display: block; margin: auto;" /&gt;
 
 
 ???
@@ -122,79 +133,54 @@ Pretest is resubmission (newer versions of packages) and also for newbies
  2 months to get back to normal
  First served are the resubmissions of packages
  
- 
 ---
+
 # CRAN patterns
 
+&lt;img src="index_files/figure-html/cran-day-month-1.png" style="display: block; margin: auto;" /&gt;
 
-![](index_files/figure-html/cran-day-month-1.png)&lt;!-- --&gt;
+Check before submitting?
 
+???
+
+temporal patterns  on review??
+How much is a lot?
 
 ---
 
 # Review time
 
-![](index_files/figure-html/cran-review-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/cran-review-1.png" style="display: block; margin: auto;" /&gt;
 
-
-
+Short reviews
 
 ???
 
-Median time on submissions ~15 hours , mean time ~90 NA
+Median time on submissions ~ hours, mean time ~NA hours.
 Between 2 and 81 hours (quartiles)
 
 ---
 
 # CRAN submission time
 
-![](index_files/figure-html/cran-submission-time-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/cran-submission-time-1.png" style="display: block; margin: auto;" /&gt;
 
-```
-## # A tibble: 9,956 x 12
-## # Groups:   package [6,056]
-##    package   submission_n d          new       h newbies pretest inspect pending
-##    &lt;chr&gt;            &lt;dbl&gt; &lt;date&gt;     &lt;chr&gt; &lt;int&gt;   &lt;int&gt;   &lt;int&gt;   &lt;int&gt;   &lt;int&gt;
-##  1 abess                1 2021-04-13 New      43      37       5       0       0
-##  2 abglasso             1 2021-05-11 New      23      11       0      12       0
-##  3 abn                  1 2020-10-22 Upda…    15       0       0      15       0
-##  4 abn                  2 2020-11-16 Upda…    51       0       0      21      30
-##  5 abn                  3 2021-04-21 Upda…    42       0       7      12      23
-##  6 abtest               1 2020-11-12 Upda…     1       0       1       0       0
-##  7 academic…            1 2021-05-10 New      23      22       0       0       0
-##  8 accucor              1 2021-04-09 New      58      30       2      25       0
-##  9 acebayes             1 2020-10-04 Upda…    22       0       0      22       0
-## 10 aceEditor            1 2020-10-14 New     202     198       3       0       0
-## # … with 9,946 more rows, and 3 more variables: publish &lt;int&gt;, waiting &lt;int&gt;,
-## #   recheck &lt;int&gt;
-```
-
-
-
+Expect 3-7 days till your new package is on CRAN.
 
 ???
-
-New packages submissions are in ~81h, while resubmissions ~5h
 
 
 ```
 ## # A tibble: 2 x 2
 ##   new     time
 ##   &lt;chr&gt;  &lt;dbl&gt;
-## 1 New       81
+## 1 New       80
 ## 2 Update     5
 ```
 
 
-use pkgsearch::cran_package_history("experDesign") for each package to know when a packages was added to CRAN. 
 
----
 
-# Comments
-
-How often do people comment and 
-
-???
 
 
 ---
@@ -203,13 +189,13 @@ How often do people comment and
 
 .pull-left[
 
-![](index_files/figure-html/bioconductor-reviewers-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/bioconductor-reviewers-1.png" style="display: block; margin: auto;" /&gt;
 
 ]
 
 .pull-right[
 
-![](index_files/figure-html/ropensci-editors-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/ropensci-editors-1.png" style="display: block; margin: auto;" /&gt;
 
 ]
 
@@ -220,17 +206,17 @@ rOpenSci editors too
 
 ---
 
-## Reviewers/Other people  role
+# Reviewers/Other people  role
 
 .pull-left[
 
-![](index_files/figure-html/users_commenters-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/users_commenters-1.png" style="display: block; margin: auto;" /&gt;
 
 ]
 
 .pull-right[
 
-![](index_files/figure-html/ros_comments-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/ros_comments-1.png" style="display: block; margin: auto;" /&gt;
 
 ]
 
@@ -243,10 +229,21 @@ Omitted bots bioc-issue-bot and ropensci-review-bot (new March 2021).
 
 ---
 
-## Bot role
+# Comments
+
+&lt;img src="index_files/figure-html/comments-1.png" style="display: block; margin: auto;" /&gt;
 
 
-![](index_files/figure-html/bioc-issue-bot-1.png)&lt;!-- --&gt;
+???
+
+
+---
+
+
+# Bot role
+
+
+&lt;img src="index_files/figure-html/bioc-issue-bot-1.png" style="display: block; margin: auto;" /&gt;
 
 ???
 
@@ -255,9 +252,9 @@ Change/adaption with time
 
 ---
 
-# Bioc bot differences
+# Labels
 
-![](index_files/figure-html/bioc-issue-bot-approved-1.png)&lt;!-- --&gt;
+&lt;img src="index_files/figure-html/labels-1.png" style="display: block; margin: auto;" /&gt;
 
 
 ---
@@ -273,14 +270,34 @@ rOpenSci: around 2 months
 ???
 
 
-rOpenSci: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
+
 
 ---
 
-# Steps estimation time
+# Submit ?
 
----
+.pull-left[
+- Prepare
 
+- Fix
+
+- Resubmit
+]
+
+.pull-right[
+**Thanks**
+R core and CRAN team
+Bioconductor core, 
+rOpenSci editors and reviewers
+]
+
+.bottom[
+***Questions ?***
+]
+
+???
+Bioconductor package submission
+rOpenSci review: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

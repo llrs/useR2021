@@ -1,9 +1,9 @@
 ---
 title: "Reviewing packages; how does it work?"
 subtitle: "⚔<br/>xaringan with useR! template"
-author: "Lluís Revilla"
+author: "[Lluís Revilla](https://llrs.dev) @[Lluis_Revilla](https://twitter.com/Lluis_Revilla) "
 institute: "IDIBAPS, CIBEREHD"
-date: "2021/05/30 (updated: `r Sys.Date()`)"
+date: "2021/05/30"
 output:
   xaringan::moon_reader:
     css: ["useR", "useR-fonts"]
@@ -17,8 +17,16 @@ output:
 # Brief introduction
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.align="center")
 
+library("tidyverse")
+library("lubridate")
+library("patchwork")
+library("ggrepel")
+theme_set(theme_minimal())
+```
+
+```{r init, cache=TRUE}
 ros <- readRDS("output/github_rOpenSci_data__cleaned.RDS")
 cran <- readRDS("output/CRAN_data_cleaned.RDS")
 bioc <- readRDS("output/submissions_bioconductor.RDS")
@@ -27,13 +35,8 @@ holidays <- data.frame(
   start = as.POSIXct("18/12/2020", format = "%d/%m/%Y", tz = "UTC"), 
   end = as.POSIXct("04/01/2021", format = "%d/%m/%Y", tz = "UTC")
 )
-library("tidyverse")
-library("lubridate")
-library("patchwork")
-library("ggrepel")
-theme_set(theme_minimal())
-
 ```
+
 
 Goals of a *submission*
 
@@ -41,10 +44,15 @@ Goals of a *submission*
 - Make it easier for others to build upon your package.
 - Other: work, grant, prestige ...
 
+???
+
+Submissions are though specially if coming from places with poor training
+Lack of confidence/experience with reviews.
+
 --
 
 .pull-left[
-**Package reviews archives**
+**Archives reviewing packages**
 
 - CRAN
 
@@ -80,24 +88,24 @@ To work with this slides use xaringan::infinite_moon_reader()
 
 # Project differences
 
-```{r echo=FALSE}
+```{r diff_proj, cache=TRUE}
 objective <- c("Publication quality and non-trivial",
                "High quality, well documented and interoperable",
                "Drive the adoption of best practices with useful, transparent and constructive feedback")
 upload <- c("tar.gz file", "fill an issue", "fill an issue")
-setup <- c("None", "ssh key, subscribe to mailing list", "Setup CI tests")
+setup <- c("None", "ssh key, subscribe mailing", "CI tests")
 checks <- c("check --as-cran", "check; Biocheck", "check --as-cran")
 os <- rep("Windows, Unix, iOS", 3)
 R_versions <- c("oldrel, release, patched, devel", "release, devel", "oldrel, release, devel")
 cycle <- c("Always open", "2 annual releases", "Always open")
+editors <- c("0", "0", "~10")
+reviewers <- c("~5", "~10", "Volunteers")
 review_system <- c("email & ftp", "Github", "Github")
-editors <- c("?", "0", "~10")
-reviewers <- c("?", "~10", "Volunteers")
 df <- data.frame(Objective = objective, Submit = upload,
-                 Setup = setup, Checks = checks, OS = os,
-                 Cycle = cycle,
-                 Versions = R_versions, 
                  Review = review_system,
+                 Setup = setup, Checks = checks, OS = os,
+                 Versions = R_versions, 
+                 Cycle = cycle,
                  Editors = editors,
                  Reviewers = reviewers)
 rownames(df) <- c("CRAN", "Bioconductor", "rOpenSci")
@@ -108,46 +116,46 @@ knitr::kable(t(df)[-1, ], otuput = "html")
 
 The different projects/archives have different setups.
 Will use data from the three projects
+All of them first you need to pass the automatic checks before a human looks into it.
 
 ---
 
 # Submissions
 
 
-```{r submissions, echo=FALSE, message=FALSE}
-
+```{r submissions}
+cran_submissions <- cran %>% 
+  filter(folder == "newbies") %>% 
+  distinct(package, .keep_all = TRUE) %>% 
+  group_by(month = lubridate::floor_date(snapshot_time, "month")) %>%   count() %>% 
+  ggplot() +
+  geom_col(aes(month, n)) +
+  labs(x = element_blank(), y = element_blank(), 
+       title = "CRAN")
+bioc_submission <- bioc %>% 
+  filter(event == "created") %>% 
+  group_by(month = lubridate::floor_date(created, "month")) %>% 
+  count() %>%
+  ungroup() %>% 
+  ggplot() +
+  geom_col(aes(month, n)) +
+  labs(x = element_blank(), y = element_blank(), 
+       title = "Bioconductor")
 ros_submissions <- ros %>% 
   ungroup() %>% 
   filter(event == "created") %>% 
   mutate(presubmission = grepl("[Pp]re-?[Ss]ubmiss", title)) %>% 
   filter(!presubmission) %>% 
-  mutate(month_year = format(created, "%Y-%m")) %>% 
-  group_by(month_year) %>% 
+  group_by(month = lubridate::floor_date(created, "month")) %>% 
   count() %>% 
+  ungroup() %>% 
   ggplot() +
-  geom_col(aes(month_year, n)) +
+  geom_col(aes(month, n)) +
   labs(x = element_blank(), y = element_blank(), 
        title = "rOpenSci")
-cran_submissions <- cran %>% 
-  filter(folder == "newbies") %>% 
-  distinct(package, .keep_all = TRUE) %>% 
-  mutate(month_year = format(snapshot_time, "%Y-%m")) %>% 
-  group_by(month_year) %>% 
-  count() %>% 
-  ggplot() +
-  geom_col(aes(month_year, n)) +
-  labs(x = element_blank(), y = element_blank(), 
-       title = "CRAN")
-bioc_submission <- bioc %>% 
-  filter(event == "created") %>% 
-  mutate(month_year = format(as.Date(created), "%Y-%m")) %>% 
-  group_by(month_year) %>% 
-  count() %>% 
-  ggplot() +
-  geom_col(aes(month_year, n)) +
-  labs(x = element_blank(), y = element_blank(), 
-       title = "Bioconductor")
 cran_submissions + bioc_submission + ros_submissions & 
+  scale_x_datetime(date_labels = "%y/%m", date_breaks = "3 months", 
+                   expand = expansion()) &
   theme(axis.text.x = element_text(angle = 45, vjust = 1.5, 
                                    hjust = 1),
         panel.grid.major.x = element_blank())
@@ -166,13 +174,14 @@ names(man_colors) <- unique(cran$folder)
 cran %>% 
   group_by(folder, snapshot_time) %>% 
   summarize(packages = n_distinct(package), .groups = "drop") %>% 
+  filter(folder %in% c("newbies", "pretest")) %>%
   ggplot() +
   geom_rect(data = holidays, aes(xmin = start, xmax = end, ymin = 0, ymax = 200),
             alpha = 0.25, fill = "red") +
   annotate("text", x = holidays$start + (holidays$end - holidays$start)/2, 
            y = 105, label = "CRAN holidays") +
   geom_path(aes(snapshot_time, packages, col = folder, linetype = folder)) +
-  scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "2 weeks", 
+  scale_x_datetime(date_labels = "%Y/%m/%d", date_breaks = "1 month", 
                    expand = expansion()) +
   scale_y_continuous(expand = expansion()) +
   scale_color_manual(values = man_colors) +
@@ -181,9 +190,11 @@ cran %>%
   theme(legend.position = c(0.6, 0.7))
 ```
 
+[CRAN incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html)
+
 ???
 
-Newbies is where most effort goes/hareder
+Newbies is where most effort goes/harder
 Pretest is resubmission (newer versions of packages) and also for newbies
 
 ---
@@ -194,7 +205,7 @@ Pretest is resubmission (newer versions of packages) and also for newbies
 ```{r cran-holidays-zoom}
 cran %>% 
   filter(snapshot_time >= holidays$start,
-         snapshot_time <= as.Date("2021/03/07")) %>% 
+         folder %in% c("newbies", "pretest")) %>%
   group_by(folder, snapshot_time) %>% 
   summarize(packages = n_distinct(package)) %>% 
   ggplot() +
@@ -219,10 +230,9 @@ cran %>%
  2 months to get back to normal
  First served are the resubmissions of packages
  
- 
 ---
-# CRAN patterns
 
+# CRAN patterns
 
 ```{r cran-day-month}
 cran_times <- cran %>% 
@@ -231,8 +241,9 @@ cran_times <- cran %>%
          mday = mday(snapshot_time),
          wday = wday(snapshot_time, locale = "en_GB.UTF-8"))
 cran_dmonth <- cran_times %>% 
+  filter(folder %in% c("newbies", "pretest"),
+         snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   arrange(folder, date, mday) %>% 
-  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(folder, date, mday) %>% 
   summarize(packages = n_distinct(package),
             week = unique(week)) %>% 
@@ -247,7 +258,8 @@ cran_dmonth <- cran_times %>%
   scale_y_continuous(expand = expansion()) 
 
 cran_dweek <- cran_times %>% 
-  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
+  filter(folder %in% c("newbies", "pretest"),
+         snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(folder, date, wday) %>% 
   summarize(packages = n_distinct(package),
             week = unique(week)) %>% 
@@ -265,6 +277,12 @@ cran_dmonth + cran_dweek + plot_layout(guides = 'collect') &
   theme(legend.position = "bottom")
 ```
 
+Check before submitting?
+
+???
+
+temporal patterns  on review??
+How much is a lot?
 
 ---
 
@@ -272,39 +290,42 @@ cran_dmonth + cran_dweek + plot_layout(guides = 'collect') &
 
 ```{r cran-review}
 submission_folders <- cran_times %>%
+  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(package, resubmission_n, submission_n) %>% 
   count(folder) %>% 
   pivot_wider(names_from = folder, values_from = n, values_fill = 0) %>% 
   ungroup()
 
 submission_folders_total <- cran_times %>%
+  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(package, resubmission_n, submission_n) %>% 
   count(folder) %>% 
   summarize(h = sum(n)) %>% 
   ungroup()
 submissions_times <- cran_times %>% 
+  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(package, resubmission_n, submission_n) %>% 
   summarize(start = min(snapshot_time), end = max(snapshot_time),
             .groups = "drop") 
 rsubm <- full_join(submission_folders, submission_folders_total) %>% 
   full_join(submissions_times)
-
-p1 <- rsubm %>% 
-  ggplot() +
-  geom_histogram(aes(h), binwidth = 24) +
-  labs(title = "Time on the ftp site:", x = "Hours", 
-       y = element_blank()) +
-  scale_x_continuous(expand = expansion()) +
-  scale_y_continuous(expand = expansion())
-p2 <- rsubm %>% 
-  filter(h <= 24*7) %>% 
-  ggplot() +
-  geom_histogram(aes(h), binwidth = 24) +
-  labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
-  scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
-  scale_y_continuous(expand = expansion()) +
-  theme(panel.background = element_rect(colour = "white"))
-presubm <- p1 + inset_element(p2, 0.2, 0.2, 1, 1)
+# 
+# p1 <- rsubm %>% 
+#   ggplot() +
+#   geom_histogram(aes(h), binwidth = 24) +
+#   labs(title = "Time on the ftp site:", x = "Hours", 
+#        y = element_blank()) +
+#   scale_x_continuous(expand = expansion()) +
+#   scale_y_continuous(expand = expansion())
+# p2 <- rsubm %>% 
+#   filter(h <= 24*7) %>% 
+#   ggplot() +
+#   geom_histogram(aes(h), binwidth = 24) +
+#   labs(subtitle = "Zoom", x = "Hours", y = element_blank()) +
+#   scale_x_continuous(expand = expansion(), breaks = seq(0, 24*7, by = 24)) +
+#   scale_y_continuous(expand = expansion()) +
+#   theme(panel.background = element_rect(colour = "white"))
+# presubm <- p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 
 p1 <- rsubm %>% 
   group_by(package, submission_n) %>% 
@@ -328,38 +349,11 @@ p2 <- rsubm %>%
 p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 ```
 
-
-```{r submission_qc, eval=FALSE, include=FALSE}
-# Quality check
-rsubm %>% mutate(difff = time-h) %>% select(package, submission_n, time, h, difff) %>% arrange(-difff)
-cran_times %>% filter(package == "rmt") %>% View("rmt") # Same version but several months appart! different submission
-ggplot(rsubm) +
-  geom_count(aes(time, h))
-cran_times %>% 
-  select(submission_n, resubmission_n, package) %>% 
-  distinct() %>% 
-  group_by(submission_n, resubmission_n) %>%
-  count() %>% 
-  ggplot() + 
-  geom_point(aes(submission_n, resubmission_n, size = n))
-# Why there are some gaps on same submission_n but 
-cran_times %>% 
-  select(submission_n, resubmission_n, package) %>% 
-  distinct() %>% 
-  group_by(package, submission_n) %>%
-  summarize(n = max(resubmission_n) - min(resubmission_n) + 1) %>% 
-  ungroup() %>% 
-  group_by(submission_n) %>% 
-  count(n) %>% 
-  ungroup() %>% 
-  ggplot() + 
-  geom_point(aes(submission_n, n, size = nn))
-# Why there are some gaps on same submission_n but 
-```
+Short reviews
 
 ???
 
-Median time on submissions ~15 hours `r median(rsubm$time)`, mean time ~90 `r mean(rsubm$time)`
+Median time on submissions ~`r median(rsubm$time, na.rm = TRUE)` hours, mean time ~`r mean(rsubm$time, na.rm = TRUE)` hours.
 Between 2 and 81 hours (quartiles)
 
 ---
@@ -387,59 +381,28 @@ subm_time %>%
   coord_cartesian(ylim = c(0, NA)) +
   labs(x = "Submission", y = "Daily median time in queue (hours)", 
        title = "Submission time", col = "Submission")
-
-rsubm %>% 
-    group_by(package, submission_n) %>% 
-    summarize(d = as.Date(min(start)),
-              new = ifelse(any(newbies != 0), "New", "Update"),
-              h = sum(h), 
-              across(newbies:recheck, .fns = sum, .names = "{.col}"))
 ```
 
-```{r eval=FALSE, include=FALSE}
-l <- lapply(unique(rsubm$package),
-       function(x){
-         y <- pkgsearch::cran_package_history(x)
-         as_datetime(y$`Date/Publication`)})
-```
-
+Expect 3-7 days till your new package is on CRAN.
 
 ???
 
-New packages submissions are in ~81h, while resubmissions ~5h
-
-```{r}
+```{r subm_time}
 subm_time %>% 
   group_by(new) %>% 
   summarise(time = median(m), .groups = "drop")
 ```
 
 
-use pkgsearch::cran_package_history("experDesign") for each package to know when a packages was added to CRAN. 
 
----
-
-# Comments
-
-How often do people comment and 
-
-???
-
-
----
-
-# Editors role
-
-.pull-left[
-
-```{r bioconductor-reviewers}
+```{r by_issue}
 trelative <- function(x) {
   created <- x$created
   event <- x$event
   start <- created[event == "created"]
   k <- event == "closed"
   if (any(k)) {
-    closing <- created[which.max(k)]
+    closing <- created[max(which(k))]
   } else {
     closing <- max(created)
   }
@@ -475,11 +438,16 @@ bioc_by_issue <- bioc %>%
             assignments = sum(event %in% "assigned"),
             reassigned = any(event %in% "unassigned"),
             assigners = list(reviewer[event %in% "assigned"]),
+            author = actor[event == "created"],
+            last_closed = ifelse(any(event == "closed"), max(created[which(event == "closed")]), max(created)),
             unassigners = list(reviewer[event %in% "unassigned"]),
             reviewers = list(reviewers(unlist(assigners, FALSE, FALSE), 
                                     unlist(unassigners, FALSE, FALSE))),
             reviewer_comments = sum(event == "commented" & 
-                                      actor %in% unlist(reviewers), na.rm = TRUE),
+                                      actor %in% unlist(reviewers) & created < last_closed, na.rm = TRUE),
+            comments = sum(event == "commented" & created < last_closed),
+            bot_comments = sum(event == "commented" & actor == "bioc-issue-bot" & created < last_closed),
+            author_comments = sum(event == "commented" & actor == author& created < last_closed),
             closers = list(actor[event == "closed"]),
             openers = list(actor[event == "reopened"]),
             closed = sum(event == "closed") >= sum(event == "reopened") & any(event == "closed"),
@@ -513,6 +481,67 @@ bioc_by_issue <- bioc_by_issue %>%
   inner_join(bioc_by_issue1, by = "id") %>% 
   inner_join(bioc_by_issue2, by = "id")
 
+
+ros_by_issue <- ros %>% 
+  group_by(id) %>% 
+  summarize(time_window = difftime(max(created), min(created), units = "days"),
+            events = n(), 
+            diff_users = n_distinct(actor),
+            author = actor[event == "created"],
+            diff_events = n_distinct(event),
+            assignments = sum(event %in% "assigned"),
+            reassigned = any(event %in% "unassigned"),
+            assigners = list(reviewer[event %in% "assigned"]),
+            unassigners = list(reviewer[event %in% "unassigned"]),
+            last_closed = ifelse(any(event == "closed"), max(created[which(event == "closed")]), max(created)),
+            editors = list(reviewers(unlist(assigners, FALSE, FALSE), 
+                                    unlist(unassigners, FALSE, FALSE))),
+            editor_comments = sum(event == "commented" & 
+                                      actor %in% unlist(editors) & created < last_closed, na.rm = TRUE),
+            comments = sum(event == "commented" & created < last_closed),
+            bot_comments = sum(event == "commented" & actor == "ropensci-review-bot" & created < last_closed),
+            author_comments = sum(event == "commented" & actor == author & created < last_closed),
+            closers = list(actor[event == "closed"]),
+            openers = list(actor[event == "reopened"]),
+            closed = sum(event == "closed") >= sum(event == "reopened") & any(event == "closed"),
+            closer = list(setdiff(unlist(closers, FALSE, FALSE), 
+                                    unlist(openers, FALSE, FALSE))),
+            labels_added = list(label[event == "labeled"]),
+            labels_removed = list(label[event == "unlabeled"]),
+            labels_final = list(setdiff(unlist(labels_added, FALSE, FALSE), 
+                                    unlist(labels_removed, FALSE, FALSE))),
+            check_labels = all(unlist(labels_final, FALSE, FALSE) %in%
+                                 label[event == "created"]),
+            submitter = actor[event == "created"]
+            
+) %>% 
+  mutate(n_reviewers = lengths(editors),
+         n_closers = lengths(closer))
+
+ros_by_issue1 <- ros %>% 
+  count(event) %>% 
+  filter(event != "created") %>% 
+  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
+  nest_by(.key = "event")
+ros_by_issue2 <- ros %>% 
+  count(actor) %>% 
+  pivot_wider(values_from = n, names_from = actor, values_fill = 0) %>% 
+  nest_by(.key = "actor")
+
+ros_by_issue <- ros_by_issue %>% 
+  inner_join(ros_by_issue1) %>% 
+  inner_join(ros_by_issue2)
+
+```
+
+
+---
+
+# Editors role
+
+.pull-left[
+
+```{r bioconductor-reviewers}
 bioc_by_user0 <- bioc %>%
   group_by(actor) %>% 
   summarize(
@@ -557,51 +586,6 @@ bioc_by_user %>%
 .pull-right[
 
 ```{r ropensci-editors}
-ros_by_issue <- ros %>% 
-  group_by(id) %>% 
-  summarize(time_window = difftime(max(created), min(created), units = "days"),
-            events = n(), 
-            diff_users = n_distinct(actor),
-            diff_events = n_distinct(event),
-            assignments = sum(event %in% "assigned"),
-            reassigned = any(event %in% "unassigned"),
-            assigners = list(reviewer[event %in% "assigned"]),
-            unassigners = list(reviewer[event %in% "unassigned"]),
-            editors = list(reviewers(unlist(assigners, FALSE, FALSE), 
-                                    unlist(unassigners, FALSE, FALSE))),
-            editor_comments = sum(event == "commented" & 
-                                      actor %in% unlist(editors), na.rm = TRUE),
-            closers = list(actor[event == "closed"]),
-            openers = list(actor[event == "reopened"]),
-            closed = sum(event == "closed") >= sum(event == "reopened") & any(event == "closed"),
-            closer = list(setdiff(unlist(closers, FALSE, FALSE), 
-                                    unlist(openers, FALSE, FALSE))),
-            labels_added = list(label[event == "labeled"]),
-            labels_removed = list(label[event == "unlabeled"]),
-            labels_final = list(setdiff(unlist(labels_added, FALSE, FALSE), 
-                                    unlist(labels_removed, FALSE, FALSE))),
-            check_labels = all(unlist(labels_final, FALSE, FALSE) %in%
-                                 label[event == "created"]),
-            submitter = actor[event == "created"]
-            
-) %>% 
-  mutate(n_reviewers = lengths(editors),
-         n_closers = lengths(closer))
-
-ros_by_issue1 <- ros %>% 
-  count(event) %>% 
-  filter(event != "created") %>% 
-  pivot_wider(values_from = n, names_from = event, values_fill = 0) %>% 
-  nest_by(.key = "event")
-ros_by_issue2 <- ros %>% 
-  count(actor) %>% 
-  pivot_wider(values_from = n, names_from = actor, values_fill = 0) %>% 
-  nest_by(.key = "actor")
-
-ros_by_issue <- ros_by_issue %>% 
-  inner_join(ros_by_issue1) %>% 
-  inner_join(ros_by_issue2)
-
 ros_by_user <- ros %>% 
   group_by(actor) %>% 
   summarize(
@@ -656,7 +640,7 @@ rOpenSci editors too
 
 ---
 
-## Reviewers/Other people  role
+# Reviewers/Other people  role
 
 .pull-left[
 
@@ -707,7 +691,58 @@ Omitted bots bioc-issue-bot and ropensci-review-bot (new March 2021).
 
 ---
 
-## Bot role
+# Comments
+
+```{r comments, cache = TRUE}
+bioc_author_reviewer_comments <- bioc_by_issue %>% 
+  select(id, Approved, comments, 
+         reviewer_comments, author_comments, bot_comments) %>% 
+  filter(Approved != "Ongoing") %>% 
+  # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
+  filter(!(author_comments == 0 & reviewer_comments == 0)) %>% 
+  ggplot() +
+  geom_count(aes(author_comments, reviewer_comments)) +
+  labs(size = "Issues", x = "Authors", y = "Reviwers", title = "Comments")
+
+bioc_auth_other_comments <- bioc_by_issue %>% 
+  select(id, comments, 
+         reviewer_comments, author_comments, bot_comments) %>% 
+  # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
+  filter(!(author_comments == 0 & reviewer_comments == 0)) %>% 
+  ggplot() +
+  geom_count(aes(author_comments, comments - reviewer_comments - bot_comments - author_comments)) +
+  labs(size = "Issues", x = "Authors", y = "Other", title = "Comments")
+
+ros_author_editor_comments <- ros_by_issue %>% 
+  select(id, comments, 
+         editor_comments, author_comments, bot_comments) %>% 
+  # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
+  filter(!(author_comments == 0 & editor_comments == 0)) %>% 
+  ggplot() +
+  geom_count(aes(author_comments, editor_comments)) +
+  labs(size = "Issues", x = "Authors", y = "Editors", title = "Comments")
+
+ros_auth_other_comments <- ros_by_issue %>% 
+  select(id, comments, 
+         editor_comments, author_comments, bot_comments) %>% 
+  # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
+  filter(!(author_comments == 0 & editor_comments == 0)) %>% 
+  ggplot() +
+  geom_count(aes(author_comments, comments - editor_comments - bot_comments - author_comments)) +
+  labs(size = "Issues", x = "Authors", y = "Reviewers & other", title = "Comments")
+
+(bioc_author_reviewer_comments + bioc_auth_other_comments) /
+  (ros_author_editor_comments + ros_auth_other_comments)
+```
+
+
+???
+
+
+---
+
+
+# Bot role
 
 
 ```{r bioc-issue-bot}
@@ -753,27 +788,73 @@ Change/adaption with time
 
 ---
 
-# Bioc bot differences
+# Labels
 
-```{r bioc-issue-bot-approved}
-bioc_bot %>% 
-  filter(Approved != "Ongoing") %>% 
-  group_by(id, reason) %>% 
-  summarize(n = n(), Approved = unique(Approved)) %>% 
-  mutate(total = sum(n)) %>% 
+```{r labels}
+bioc_labels <- bioc %>% 
+  filter(event == "labeled") %>% 
+  mutate(label = unlist(label),
+         label = case_when(
+           label == "1a. awaiting moderation" ~ "1. awaiting moderation", 
+           label == "4a. accepted" ~ "3a. accepted",
+           label == "ok_to_build" ~ "1. awaiting moderation",
+           label == "awaiting moderation" ~ "1. awaiting moderation",
+           label == "review-in-progress" ~ "2. review in progress",
+           label == "TESTING" ~ NA_character_, 
+           TRUE ~ label)) %>% 
+  filter(!is.na(label))
+
+bioc_ord_label <- c("1. awaiting moderation",  
+               "2. review in progress", "3a. accepted", 
+               "3b. declined", "3c. inactive")
+bioc_labels_plot <- bioc_labels %>% 
+  filter(label %in% bioc_ord_label) %>% 
   group_by(id) %>% 
-  mutate(perc = n/total) %>% 
-  filter(reason != "Accepted") %>% 
-  group_by(reason) %>% 
-  filter(n_distinct(Approved) >= 2) %>% 
-  ungroup() %>% 
-  filter(!reason %in% c("Unmatch", "Missing repository", "Building")) %>% 
+  count(label, sort = TRUE) %>% 
   ggplot() +
-  geom_jitter(aes(Approved, n, col = Approved, shape = Approved), height = 0) + 
-  scale_y_continuous(limits = c(0, NA)) +
-  facet_wrap(~reason, ncol = 4, scales = "free_y") +
-  labs(x = element_blank(), y = "Comments", 
-       title = "Diferences between accepted and non accepted issues by bioc-issue-bot comments")
+  geom_tile(aes(id, fct_relevel(label, rev(bioc_ord_label)), fill = n)) +
+  scale_fill_continuous(trans = "log10") +
+  labs(x = "Issue", y = element_blank(), title = "Labels per Issue",
+       fill = "Times") +
+  scale_fill_continuous(limits = c(1, 5))
+
+
+
+ros_labels <- ros %>% 
+  ungroup() %>% 
+  filter(event == "labeled") %>% 
+  mutate(label = unlist(label),
+         label = case_when(
+           label == "reviewer-requested" ~ "2/seeking-reviewer(s)",
+           label == "seeking-reviewers" ~ "2/seeking-reviewer(s)",
+           label == "2/seeking-reviewers" ~ "2/seeking-reviewer(s)",
+           label == "3/reviewers-assigned" ~ "3/reviewer(s)-assigned",
+           label == "4/review-in-awaiting-changes" ~ "4/review(s)-in-awaiting-changes",
+           label == "review-in-awaiting-changes" ~ "4/review(s)-in-awaiting-changes",
+           label == "changes-in-awaiting-response" ~ "4/review(s)-in-awaiting-changes",
+           label == "5/awaiting-reviewer-response" ~ "5/awaiting-reviewer(s)-response",
+           label == "approved" ~ "6/approved",
+           label == "topic:linquistics" ~ "topic:linguistics",
+           TRUE ~ label
+         ))
+
+ros_ord_label <- c("0/presubmission",
+               "1/editor-checks",  
+               "2/seeking-reviewer(s)", "3/reviewer(s)-assigned", 
+               "4/review(s)-in-awaiting-changes",
+               "5/awaiting-reviewer(s)-response", 
+               "6/approved")
+ros_labels_plot <- ros_labels %>% 
+  group_by(id) %>% 
+  count(label, sort = TRUE) %>% 
+  ungroup() %>% 
+  filter(label %in% ros_ord_label) %>% 
+  ggplot() +
+  geom_tile(aes(id, fct_relevel(label, rev(ros_ord_label)), fill = n)) +
+  labs(x = "Issue", y = element_blank(), title = "Labels related to the review process",
+       fill = "Times") +
+  scale_fill_continuous(limits = c(1, 5))
+bioc_labels_plot + ros_labels_plot + plot_layout(guides = "collect")
 ```
 
 
@@ -790,11 +871,37 @@ rOpenSci: around 2 months
 ???
 
 
-rOpenSci: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
+```{r cran_success, eval=FALSE, include=FALSE}
+l <- lapply(unique(rsubm$package),
+       function(x){
+         y <- pkgsearch::cran_package_history(x)
+         as_datetime(y$`Date/Publication`)})
+```
 
 ---
 
-# Steps estimation time
+# Submit ?
 
----
+.pull-left[
+- Prepare
 
+- Fix
+
+- Resubmit
+]
+
+.pull-right[
+**Thanks**
+
+R core and CRAN team
+Bioconductor core, 
+rOpenSci editors and reviewers
+]
+
+.bottom[
+***Questions ?***
+]
+
+???
+Bioconductor package submission
+rOpenSci review: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
