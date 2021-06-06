@@ -13,9 +13,9 @@
     <meta name="twitter:title" content="Reviewing packages; how does it work?"/>
     <meta name="twitter:description" content="Analysis and tips about how package reviews work. Presented at useR!2021."/>
     <meta name="twitter:url" content="https://user2021.llrs.dev"/>
-    <meta name="twitter:image:src" content="https://llrs.dev/2020/07/bioconductor-submissions-reviews/index_files/figure-html/first_plot-1.png"/>
+    <meta name="twitter:image" content="https://llrs.dev/2020/07/bioconductor-submissions-reviews/index_files/figure-html/first_plot-1.png"/>
     <meta name="twitter:image:alt" content="Image from a blog https://llrs.dev/2020/07/bioconductor-submissions-reviews/ for Reviewing packages; how does it work? Horizontal axis the date, vertical axis the submissions on Bioconductor each point is an event on a submission. It shows a continuous increase on packages submitted. Presented at useR!2021 by Lluís Revilla"/>
-    <meta name="twitter:card" content="summary"/>
+    <meta name="twitter:card" content="summary_large_image"/>
     <meta name="twitter:creator" content="@Lluis_Revilla"/>
     <meta name="twitter:site" content="@Lluis_Revilla"/>
     <meta property="og:title" content="Reviewing packages; how does it work?"/>
@@ -281,18 +281,34 @@ rOpenSci provides more detailed questioning for scope of a package.
 
 # Success submissions
 
-CRAN: Not easy way to know
 
-Bioconductor: 1 month
 
-rOpenSci: around 2 months
+| 1. awaiting moderation| 2. review in progress| 3a. accepted| 3b. declined|
+|----------------------:|---------------------:|------------:|------------:|
+|               2.31e-05|             0.2215856|     35.86804|      19.0789|
 
+
+
+|name                            | Median days| Total days|
+|:-------------------------------|-----------:|----------:|
+|1/editor-checks                 |         2.7|        2.7|
+|2/seeking-reviewer(s)           |         2.1|        4.8|
+|3/reviewer(s)-assigned          |         6.8|       11.6|
+|4/review(s)-in-awaiting-changes |        26.4|       38.0|
+|5/awaiting-reviewer(s)-response |        17.1|       55.1|
+|6/approved                      |        12.7|       67.8|
+
+.center[
+
+Bioconductor: 1 month,  rOpenSci: around 2 months
+
+]
 
 ???
 
-CRAN:
+CRAN: 80h
 Bioconductor: most of them in 1 month
-rOpenSci: in 2 months (seeking 2 reviwers and posting them).
+rOpenSci: in 2 months (seeking 2 reviewers and posting them).
 
 
 
@@ -307,8 +323,6 @@ rOpenSci: in 2 months (seeking 2 reviwers and posting them).
 - **Fix**
 
 - Resubmit
-
-]
 
 .center[
 
@@ -329,6 +343,7 @@ rOpenSci editors and reviewers
 ]
 
 ]
+
 ???
 
 rOpenSci review: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)

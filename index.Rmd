@@ -52,7 +52,7 @@ meta() %>%
     ),
     og_type = "website",
     og_author = "Lluís Revilla",
-    twitter_card_type = "summary",
+    twitter_card_type = "summary_large_image",
     twitter_creator = "@Lluis_Revilla"
   )
 ```
@@ -431,13 +431,6 @@ trelative <- function(x) {
   created <- x$created
   event <- x$event
   start <- created[event == "created"]
-  k <- event == "closed"
-  if (any(k)) {
-    closing <- created[max(which(k))]
-  } else {
-    closing <- max(created)
-  }
-  
   o <- difftime(created[!is.na(created)], start, units = "days")
   as.numeric(o)
 }
@@ -783,7 +776,14 @@ rOpenSci is going to have a bot too [ropensci-review-bot](https://github.com/rop
 # Labels
 
 ```{r labels}
+bioc_relative <- bioc %>% 
+  ungroup() %>% 
+  nest_by(id, .keep = FALSE) %>% 
+  summarize(t_relative = trelative(data), .groups = "drop")
+
 bioc_labels <- bioc %>% 
+  ungroup() %>% 
+  mutate(t_relative = bioc_relative$t_relative) %>% 
   filter(event == "labeled") %>% 
   mutate(label = unlist(label),
          label = case_when(
@@ -812,8 +812,14 @@ bioc_labels_plot <- bioc_labels %>%
 
 
 
+ros_relative <- ros %>% 
+  ungroup() %>% 
+  nest_by(id, .keep = FALSE) %>% 
+  summarize(t_relative = trelative(data), .groups = "drop")
+
 ros_labels <- ros %>% 
   ungroup() %>% 
+  mutate(t_relative = ros_relative$t_relative) %>% 
   filter(event == "labeled") %>% 
   mutate(label = unlist(label),
          label = case_when(
@@ -860,24 +866,98 @@ rOpenSci provides more detailed questioning for scope of a package.
 
 # Success submissions
 
-CRAN: Not easy way to know
 
-Bioconductor: 1 month
+```{r subm_timeline}
+bioc_lab_wide <- bioc_labels %>% 
+  ungroup() %>% 
+  filter(label %in% bioc_ord_label) %>% 
+  pivot_wider(id_cols = id, values_from = t_relative, names_from = label,
+              values_fn = last)
+bioc_lab_wide %>% 
+  summarize(across( 2:5, .fn = function(x){median(x, na.rm = TRUE)})) %>% 
+  knitr::kable()
 
-rOpenSci: around 2 months
 
+ros_lab_wide <- ros_labels %>% 
+  ungroup() %>% 
+  filter(label %in% ros_ord_label[2:7]) %>% 
+  pivot_wider(id_cols = id, values_from = t_relative, names_from = label,
+              values_fn = last) %>% 
+  select(id, ros_ord_label[2:7])
+res <- ros_lab_wide %>% 
+  # group_by(approved = ifelse(!is.na(`6/approved`), "Approved", "Pending?")) %>% 
+  summarize(
+    s1 = median(`1/editor-checks`, na.rm = TRUE),
+    s2 = median(`2/seeking-reviewer(s)` - `1/editor-checks`, na.rm = TRUE),
+    s3 = median(`3/reviewer(s)-assigned` - `2/seeking-reviewer(s)`, na.rm = TRUE),
+    s4 = median(`4/review(s)-in-awaiting-changes` - `3/reviewer(s)-assigned`, na.rm = TRUE),
+    s5 = median(`5/awaiting-reviewer(s)-response` - `4/review(s)-in-awaiting-changes`, na.rm = TRUE),
+    s6 = median(`6/approved` - `5/awaiting-reviewer(s)-response`, na.rm = TRUE))
+colnames(res) <- ros_ord_label[2:7]
+res %>% 
+  pivot_longer(cols = ros_ord_label[2:7]) %>% 
+  mutate(`Median days` = round(value, 1),
+         `Total days` = round(cumsum(value), 1)) %>% 
+  select(name, `Median days`, `Total days`) %>% 
+  knitr::kable()
+```
+
+.center[
+
+Bioconductor: 1 month,  rOpenSci: around 2 months
+
+]
 
 ???
 
-CRAN:
+CRAN: 80h
 Bioconductor: most of them in 1 month
-rOpenSci: in 2 months (seeking 2 reviwers and posting them).
+rOpenSci: in 2 months (seeking 2 reviewers and posting them).
 
 ```{r cran_success, eval=FALSE, include=FALSE}
 l <- lapply(unique(rsubm$package),
        function(x){
-         y <- pkgsearch::cran_package_history(x)
-         as_datetime(y$`Date/Publication`)})
+         y <- tryCatch(pkgsearch::cran_package_history(x), 
+                       error = function(e){FALSE})
+         if (!isFALSE(y)) {
+           as_datetime(y$`Date/Publication`)
+         } else {
+           y
+         }
+       })
+names(l) <- unique(rsubm$package)
+f <- function(start, package, li) {
+  dates <- li[[package]]
+  dates <- dates[!is.na(dates)] # Too old packages don't have date
+  if (is.logical(dates)) {
+    return(NA)
+  }
+  n <- near(dates, start, tol = 23)
+  any_date <- dates > start | n
+  if (!any(any_date)) {
+    return(NA)
+  }
+  min(dates[any_date])
+}
+
+ap <- rsubm %>% 
+  group_by(package, submission_n) %>% 
+  summarize(start = min(start), end = max(end), 
+            newbies = ifelse(sum(newbies) > 0, TRUE, FALSE)) %>% 
+  ungroup() %>% 
+  rowwise() %>% 
+  mutate(accepted = f(start, package, l)) %>% 
+  ungroup() %>% 
+  mutate(tdiff = difftime(accepted, start, units = "hours")) 
+ap %>% 
+  group_by(submission_n) %>% 
+  count(Accepted = !is.na(accepted)) %>% 
+  ungroup() %>% 
+  mutate(submission_n = fct_relevel(as.factor(submission_n), as.character(1:10))) %>%
+  ggplot() + 
+  geom_col(aes(x = submission_n, y = n, fill = Accepted)) +
+  # scale_y_continuous(labels = scales::percent) +
+  labs(x = "Submissions", y = "Packages")
 ```
 
 ---
@@ -891,8 +971,6 @@ l <- lapply(unique(rsubm$package),
 - **Fix**
 
 - Resubmit
-
-]
 
 .center[
 
@@ -913,6 +991,7 @@ rOpenSci editors and reviewers
 ]
 
 ]
+
 ???
 
 rOpenSci review: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
