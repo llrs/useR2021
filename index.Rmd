@@ -12,12 +12,16 @@ output:
       highlightLines: true
       countIncrementalSlides: false
       
+
+
 ---
 
 # Brief introduction
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.align="center", fig.asp=0.618, fig.height=10, fig.retina=3)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, 
+                      warning = FALSE, fig.align = "center", 
+                      fig.height=6, fig.width = 11, fig.retina = 3)
 # Change ratio of screen with
 #   nature:
 #      ratio: 9:1 
@@ -25,7 +29,10 @@ library("tidyverse")
 library("lubridate")
 library("patchwork")
 library("ggrepel")
-theme_set(theme_minimal())
+
+theme_slides <- theme_minimal() +
+  theme(text = element_text(size = 16))
+theme_set(theme_slides)
 # https://pkg.garrickadenbuie.com/xaringanExtra/#/slide-tone
 xaringanExtra::use_slide_tone()
 # Icons from: https://github.com/mitchelloharawild/icons
@@ -58,11 +65,17 @@ meta() %>%
 ```
 
 
-```{r init, cache=TRUE}
+```{r init}
 ros <- readRDS("output/github_rOpenSci_data__cleaned.RDS")
 cran <- readRDS("output/CRAN_data_cleaned.RDS")
 bioc <- readRDS("output/submissions_bioconductor.RDS")
+cran_dates <- readRDS("output/CRAN_archival_dates.RDS")
+bioc_col <- c(low = "#87b13f", high = "#1a81c2")
+bioc_colors <- scale_color_continuous(low = "#87b13f", high = "#1a81c2")
 
+bioc_logo <- "https://bioconductor.org/images/logo_bioconductor.gif"
+# bir <- image_read(bioc_logo)
+ros_colors <- c(low = "#FFFFFF", high = "#73ADF2")
 holidays <- data.frame(
   start = as.POSIXct("18/12/2020", format = "%d/%m/%Y", tz = "UTC"), 
   end = as.POSIXct("04/01/2021", format = "%d/%m/%Y", tz = "UTC")
@@ -131,21 +144,23 @@ os <- rep("Windows, Unix, iOS", 3)
 R_versions <- c("oldrel, release, patched, devel", "release, devel", "oldrel, release, devel")
 cycle <- c("Always open", "2 annual releases", "Always open")
 editors <- c("0", "0", "~10")
-reviewers <- c("~5", "~10", "Volunteers")
+reviewers <- c("<b>~5</b>", "~10", "Volunteers")
 review_system <- c("email & ftp", "Github", "Github")
-df <- data.frame(Objective = objective, Submit = upload,
+links <- c("https://cran.r-project.org/submit.html",
+           "https://github.com/Bioconductor/Contributions/",
+           "https://github.com/ropensci/software-review/")
+repos <- c("CRAN", "Bioconductor", "rOpenSci")
+df <- data.frame(Objective = objective, 
+                 Submit = paste0("<a href=", links, ">", upload, "</a>"),
                  Review = review_system,
                  Setup = setup, Checks = checks, OS = os,
                  Versions = R_versions, 
                  Cycle = cycle,
                  Editors = editors,
                  Reviewers = reviewers)
-rownames(df) <- c("CRAN", "Bioconductor", "rOpenSci")
+rownames(df) <- repos
 knitr::kable(t(df)[-1, ], otuput = "html")
 ```
-
-[CRAN](https://cran.r-project.org/submit.html)  [Bioconductor](https://github.com/Bioconductor/Contributions/) 
-[rOpenSci](https://github.com/ropensci/software-review/)
 
 ???
 
@@ -192,22 +207,26 @@ ros_submissions <- ros %>%
 cran_submissions + bioc_submission + ros_submissions & 
   scale_x_datetime(date_labels = "%y/%m", date_breaks = "4 months", 
                    expand = expansion()) &
+  # scale_y_continuous(limits = c(0, 380)) &
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         panel.grid.major.x = element_blank())
 ```
 
+.center[
 CRAN data thanks to the [incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html).
+
+]
 
 ???
 
 One order of magnitude of difference between each other CRAN > Bioconductor > rOpenSci
 Many variability on month
-Also very few data from CRAN 
+Also very few data collected from CRAN so far (Also there are some hiccups on CRAN collection, near the end of May the CRON job stopped working for a week. )
 
 ---
 # Organization
 
-```{r cran-holidays, fig.height=5}
+```{r cran-holidays}
 man_colors <- RColorBrewer::brewer.pal(8, "Dark2")
 names(man_colors) <- unique(cran$folder)
 cran %>% 
@@ -230,7 +249,9 @@ cran %>%
         legend.position = c(0.6, 0.7))
 ```
 
+.center[
 Packages are moved by reviewers between folders.
+]
 
 ???
 
@@ -261,7 +282,7 @@ cran %>%
         legend.position = c(0.8, 0.7))
 ```
 
-Big volume of work! Patience!
+.center[Big volume of work! Patience!]
 
 ???
  
@@ -291,7 +312,7 @@ cran_dmonth <- cran_times %>%
   labs(x = "Day of the month", y = "Packages", col = "Folder", linetype = "Folder",
        title = "Evolution by month day") +
   scale_color_manual(values = man_colors) +
-  coord_cartesian(ylim = c(0, NA), xlim = c(1, NA)) +
+  coord_cartesian(xlim = c(1, NA)) +
   scale_x_continuous(expand = expansion()) +
   scale_y_continuous(expand = expansion()) 
 
@@ -304,18 +325,21 @@ cran_dweek <- cran_times %>%
   group_by(folder, wday) %>% 
   ggplot() +
   geom_smooth(aes(wday, packages, col = folder, linetype = folder)) +
-  labs(x = "Day of the week", y = "Packages", col = "Folder", linetype = "Folder",
+  labs(x = "Week dat", y = element_blank(), col = "Folder", 
+       linetype = "Folder",
        title = "Evolution by week day") +
   scale_color_manual(values = man_colors) +
   scale_x_continuous(breaks = 1:7, expand = expansion()) +
-  scale_y_continuous(expand = expansion(), limits = c(0, NA))
+  scale_y_continuous(expand = expansion())
 
 cran_dmonth + cran_dweek + plot_layout(guides = 'collect') &
   guides(colour = guide_legend(nrow = 1, override.aes = list(fill = NA))) &
   theme(legend.position = "bottom")
 ```
 
+.center[
 Check [dashboard](https://lockedata.github.io/cransays/articles/dashboard.html) before submitting?
+]
 
 ???
 
@@ -327,20 +351,17 @@ Submit when you are ready, better be on the queue than outside.
 
 ```{r cran-review}
 submission_folders <- cran_times %>%
-  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(package, resubmission_n, submission_n) %>% 
   count(folder) %>% 
   pivot_wider(names_from = folder, values_from = n, values_fill = 0) %>% 
   ungroup()
 
 submission_folders_total <- cran_times %>%
-  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(package, resubmission_n, submission_n) %>% 
   count(folder) %>% 
   summarize(h = sum(n)) %>% 
   ungroup()
 submissions_times <- cran_times %>% 
-  filter(snapshot_time < holidays$start | snapshot_time  > holidays$end) %>% 
   group_by(package, resubmission_n, submission_n) %>% 
   summarize(start = min(snapshot_time), end = max(snapshot_time),
             .groups = "drop") 
@@ -370,12 +391,12 @@ p2 <- rsubm %>%
 p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 ```
 
-Reviews are short, brief and to the point.
+.center[Reviews are short, brief and to the point.]
 
 ???
 
 Median time on submissions ~`r median(rsubm$time, na.rm = TRUE)` hours, mean time ~`r mean(rsubm$time, na.rm = TRUE)` hours.
-Between 2 and 81 hours (quartiles)
+`r summary(rsubm$time)`
 
 ---
 
@@ -410,7 +431,7 @@ subm_time %>%
   theme(legend.position = c(0.8, 0.7))
 ```
 
-Expect 3-7 days till your new package is on CRAN.
+.center[Expect 3-7 days till your new package is on CRAN.]
 
 ???
 
@@ -423,7 +444,6 @@ subm_time %>%
   group_by(new) %>% 
   summarise(time = median(m), .groups = "drop")
 ```
-
 
 
 ```{r by_issue}
@@ -599,8 +619,7 @@ bioc_users_plot <- bioc_by_user %>%
   scale_y_continuous(trans = "log10") +
   labs(size = "Users", col = "Reviewer?", y = "Actions", 
        x = "Issues", shape = "Reviewer?",
-       title = "Users involvement") +
-  theme_minimal()
+       title = "Bioconductor")
 ```
 
 ```{r ropensci-editors}
@@ -643,22 +662,21 @@ ros_users_plot <- ros_by_user %>%
   scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans = "log10") +
   labs(size = "Users", col = "Different events", y = "Actions", x = "Issues",
-       title = "rOpenSci") +
-  theme_minimal()
-
+       title = "rOpenSci") 
 ```
 
 
 ```{r users-plots}
+pal <- RColorBrewer::brewer.pal(name = "Paired", n = 12)
 (bioc_users_plot + ros_users_plot &
    guides(col = FALSE, shape = FALSE) &
-   scale_color_viridis_d() &
+   # scale_color_manual(values = pal) &
    scale_y_continuous(limits = c(1, 10000), trans = "log10") &
    scale_size(limits = c(1, 40))) +
   plot_layout(guides = "collect")
 ```
 
-Some users help with many reviews.
+.center[Some users help with many reviews.]
 
 ???
 
@@ -717,7 +735,9 @@ ros_auth_other_comments <- ros_by_issue %>%
   plot_layout(guides = "collect")
 ```
 
+.center[
 A dialog between authors and reviewers & editors. 
+]
 
 ???
 
@@ -728,11 +748,10 @@ Non reviewers users on bioconductor still chime in to help.
 # Bot role
 
 ```{r bioc-issue-bot}
-comments <- bioc %>% 
+bioc_bot <- bioc %>% 
   ungroup() %>% 
-  filter(event == "commented")
-bioc_bot <- comments %>% 
-  filter(actor == "bioc-issue-bot") %>% 
+  filter(event == "commented",
+         actor == "bioc-issue-bot") %>% 
   mutate(reason = case_when(
     startsWith(text, "Hi @") ~ "Received",
     startsWith(text, "Received a valid push") ~ "Valid push",
@@ -763,7 +782,7 @@ bioc_bot %>%
        y = element_blank(), col = "Comments")
 ```
 
-Bot helps on the process and changes with the process
+.center[Bot helps on the process and changes with the process]
 
 ???
 
@@ -806,7 +825,7 @@ bioc_labels_plot <- bioc_labels %>%
   ggplot() +
   geom_tile(aes(id, fct_relevel(label, rev(bioc_ord_label)), fill = n)) +
   scale_fill_continuous(trans = "log10") +
-  labs(x = "Issue", y = element_blank(), title = "Labels per Issue",
+  labs(x = "Issue", y = element_blank(), title = "Bioconductor",
        fill = "Times") +
   scale_fill_continuous(limits = c(1, 5))
 
@@ -849,13 +868,15 @@ ros_labels_plot <- ros_labels %>%
   filter(label %in% ros_ord_label) %>% 
   ggplot() +
   geom_tile(aes(id, fct_relevel(label, rev(ros_ord_label)), fill = n)) +
-  labs(x = "Issue", y = element_blank(), title = "Labels related to the review process",
+  labs(x = "Issue", y = element_blank(), title = "rOpenSci",
        fill = "Times") +
   scale_fill_continuous(limits = c(1, 5))
-bioc_labels_plot + ros_labels_plot + plot_layout(guides = "collect")
+bioc_labels_plot + ros_labels_plot &
+  scale_color_viridis_c() &
+  plot_layout(guides = "collect")
 ```
 
-Labels are used to indicate progress on the submission.
+.center[Labels are used to indicate progress on the submission.]
 
 ???
 
@@ -866,8 +887,59 @@ rOpenSci provides more detailed questioning for scope of a package.
 
 # Success submissions
 
+```{r cran_success}
+approval_dates <- function(start, package, li) {
+  dates <- li[[package]]
+  dates <- dates[!is.na(dates)] # Too old packages don't have date
+  if (is.logical(dates)) {
+    return(NA)
+  }
+  n <- near(dates, start, tol = 23)
+  any_date <- dates > start | n
+  if (!any(any_date)) {
+    return(NA)
+  }
+  min(dates[any_date])
+}
+
+ap0 <- rsubm %>% 
+  group_by(package, submission_n) %>% 
+  rowwise() %>% 
+  mutate(accepted = approval_dates(start, package, cran_dates)) %>% 
+  distinct(package, submission_n, accepted)
+
+ap <-  ap0 %>% 
+  group_by(submission_n) %>% 
+  count(Accepted = !is.na(accepted)) %>% 
+  ungroup() %>% 
+  mutate(submission_n = fct_relevel(as.factor(submission_n), as.character(1:10)))
+
+ggplot(ap) + 
+  geom_col(aes(x = submission_n, y = n, fill = Accepted)) +
+  labs(x = "Submissions", y = "Packages")
+```
+
+.center[
+
+Bioconductor: 1 month,  rOpenSci: around 2 months
+
+]
+
+???
 
 ```{r subm_timeline}
+ap %>% 
+  group_by(submission_n) %>% 
+  mutate(perc = n/sum(n)*100) %>% 
+  ungroup() %>% 
+  mutate(suspended = ifelse(!Accepted, n, 0),
+         perc_suspended = suspended/sum(suspended)*100)
+bioc %>% 
+  distinct(id, Approved) %>% 
+  count(Approved) %>% 
+  filter(Approved != "Ongoing") %>% 
+  mutate( perc = n/sum(n))
+
 bioc_lab_wide <- bioc_labels %>% 
   ungroup() %>% 
   filter(label %in% bioc_ord_label) %>% 
@@ -902,85 +974,48 @@ res %>%
   knitr::kable()
 ```
 
-.center[
-
-Bioconductor: 1 month,  rOpenSci: around 2 months
-
-]
-
-???
-
 CRAN: 80h
 Bioconductor: most of them in 1 month
 rOpenSci: in 2 months (seeking 2 reviewers and posting them).
 
-```{r cran_success, eval=FALSE, include=FALSE}
-l <- lapply(unique(rsubm$package),
-       function(x){
-         y <- tryCatch(pkgsearch::cran_package_history(x), 
-                       error = function(e){FALSE})
-         if (!isFALSE(y)) {
-           as_datetime(y$`Date/Publication`)
-         } else {
-           y
-         }
-       })
-names(l) <- unique(rsubm$package)
-f <- function(start, package, li) {
-  dates <- li[[package]]
-  dates <- dates[!is.na(dates)] # Too old packages don't have date
-  if (is.logical(dates)) {
-    return(NA)
-  }
-  n <- near(dates, start, tol = 23)
-  any_date <- dates > start | n
-  if (!any(any_date)) {
-    return(NA)
-  }
-  min(dates[any_date])
-}
-
-ap <- rsubm %>% 
-  group_by(package, submission_n) %>% 
-  summarize(start = min(start), end = max(end), 
-            newbies = ifelse(sum(newbies) > 0, TRUE, FALSE)) %>% 
-  ungroup() %>% 
-  rowwise() %>% 
-  mutate(accepted = f(start, package, l)) %>% 
-  ungroup() %>% 
-  mutate(tdiff = difftime(accepted, start, units = "hours")) 
-ap %>% 
-  group_by(submission_n) %>% 
-  count(Accepted = !is.na(accepted)) %>% 
-  ungroup() %>% 
-  mutate(submission_n = fct_relevel(as.factor(submission_n), as.character(1:10))) %>%
-  ggplot() + 
-  geom_col(aes(x = submission_n, y = n, fill = Accepted)) +
-  # scale_y_continuous(labels = scales::percent) +
-  labs(x = "Submissions", y = "Packages")
-```
-
 ---
 
-# Submit ?
+# Submit!
 
-- Prepare
+1. Prepare
+ 
+  Manual to [create R packages](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Creating-R-packages), [R Packages](https://r-pkgs.org/)
+  Follow policies ([CRAN](https://cran.r-project.org/web/packages/policies.html)) and **guidelines** ([Bioconductor](https://www.bioconductor.org/developers/package-submission/), [rOpenSci](https://devguide.ropensci.org/)).
+
+2. **Check**
+
+  [Use Rhub](https://builder.r-hub.io/), [Github Actions](https://github.com/r-lib/actions)
   
-  Follow policies and guidelines: [CRAN](https://cran.r-project.org/web/packages/policies.html), [Bioconductor](https://www.bioconductor.org/developers/package-submission/), [rOpenSci](https://devguide.ropensci.org/).
+3. (Re)***Submit***
 
-- **Fix**
+???
 
-- Resubmit
+Follow the detailed guidelines from Bioconductor and rOpenSci.
+Fix any problem that you haven't detected previously (double check the policy on CRAN). 
+Resubmit
+
+--
 
 .center[
 
 # Thanks
-
 R core and CRAN team
 Bioconductor core, 
 rOpenSci editors and reviewers
 
 ]
+
+???
+
+Thank also the package authors (mainly tidyverse).
+Maëlle and Locke for the dashboard.
+
+--
 
 .center[
 
@@ -989,6 +1024,7 @@ rOpenSci editors and reviewers
 ***Questions ?***
 
 ]
+Blog posts for [Bioconductor](https://llrs.dev/2020/07/bioconductor-submissions-reviews/), [rOpenSci](https://llrs.dev/2020/09/ropensci-submissions/), [CRAN](https://llrs.dev/2021/01/cran-review/). 
 
 ]
 

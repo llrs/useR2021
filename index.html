@@ -99,20 +99,17 @@ To work with this slides use xaringan::infinite_moon_reader()
 # Project differences
 
 
-|          |CRAN                            |Bioconductor               |rOpenSci               |
-|:---------|:-------------------------------|:--------------------------|:----------------------|
-|Submit    |tar.gz file                     |fill an issue              |fill an issue          |
-|Review    |email &amp; ftp                     |Github                     |Github                 |
-|Setup     |None                            |ssh key, subscribe mailing |CI tests               |
-|Checks    |check --as-cran                 |check; Biocheck            |check --as-cran        |
-|OS        |Windows, Unix, iOS              |Windows, Unix, iOS         |Windows, Unix, iOS     |
-|Versions  |oldrel, release, patched, devel |release, devel             |oldrel, release, devel |
-|Cycle     |Always open                     |2 annual releases          |Always open            |
-|Editors   |0                               |0                          |~10                    |
-|Reviewers |~5                              |~10                        |Volunteers             |
-
-[CRAN](https://cran.r-project.org/submit.html)  [Bioconductor](https://github.com/Bioconductor/Contributions/) 
-[rOpenSci](https://github.com/ropensci/software-review/)
+|          |CRAN                                                           |Bioconductor                                                             |rOpenSci                                                               |
+|:---------|:--------------------------------------------------------------|:------------------------------------------------------------------------|:----------------------------------------------------------------------|
+|Submit    |&lt;a href=https://cran.r-project.org/submit.html&gt;tar.gz file&lt;/a&gt; |&lt;a href=https://github.com/Bioconductor/Contributions/&gt;fill an issue&lt;/a&gt; |&lt;a href=https://github.com/ropensci/software-review/&gt;fill an issue&lt;/a&gt; |
+|Review    |email &amp; ftp                                                    |Github                                                                   |Github                                                                 |
+|Setup     |None                                                           |ssh key, subscribe mailing                                               |CI tests                                                               |
+|Checks    |check --as-cran                                                |check; Biocheck                                                          |check --as-cran                                                        |
+|OS        |Windows, Unix, iOS                                             |Windows, Unix, iOS                                                       |Windows, Unix, iOS                                                     |
+|Versions  |oldrel, release, patched, devel                                |release, devel                                                           |oldrel, release, devel                                                 |
+|Cycle     |Always open                                                    |2 annual releases                                                        |Always open                                                            |
+|Editors   |0                                                              |0                                                                        |~10                                                                    |
+|Reviewers |&lt;b&gt;~5&lt;/b&gt;                                                      |~10                                                                      |Volunteers                                                             |
 
 ???
 
@@ -126,22 +123,27 @@ All of them first you need to pass the automatic checks in place before a human 
 # Submissions
 
 
-&lt;img src="index_files/figure-html/submissions-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/submissions-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
+.center[
 CRAN data thanks to the [incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html).
+
+]
 
 ???
 
 One order of magnitude of difference between each other CRAN &gt; Bioconductor &gt; rOpenSci
 Many variability on month
-Also very few data from CRAN 
+Also very few data collected from CRAN so far (Also there are some hiccups on CRAN collection, near the end of May the CRON job stopped working for a week. )
 
 ---
 # Organization
 
-&lt;img src="index_files/figure-html/cran-holidays-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/cran-holidays-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
+.center[
 Packages are moved by reviewers between folders.
+]
 
 ???
 
@@ -154,9 +156,9 @@ Pretest is resubmission (newer versions of packages) and also for newbies
 
 # Workload after holidays
 
-&lt;img src="index_files/figure-html/cran-holidays-zoom-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/cran-holidays-zoom-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
-Big volume of work! Patience!
+.center[Big volume of work! Patience!]
 
 ???
  
@@ -167,9 +169,11 @@ First served are the resubmissions of packages.
 
 # Submissions patterns
 
-&lt;img src="index_files/figure-html/cran-day-month-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/cran-day-month-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
+.center[
 Check [dashboard](https://lockedata.github.io/cransays/articles/dashboard.html) before submitting?
+]
 
 ???
 
@@ -179,22 +183,22 @@ Submit when you are ready, better be on the queue than outside.
 
 # Review time
 
-&lt;img src="index_files/figure-html/cran-review-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/cran-review-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
-Reviews are short, brief and to the point.
+.center[Reviews are short, brief and to the point.]
 
 ???
 
 Median time on submissions ~ hours, mean time ~NA hours.
-Between 2 and 81 hours (quartiles)
+0, NULL, NULL
 
 ---
 
 # Review speed 
 
-&lt;img src="index_files/figure-html/cran-submission-time-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/cran-submission-time-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
-Expect 3-7 days till your new package is on CRAN.
+.center[Expect 3-7 days till your new package is on CRAN.]
 
 ???
 
@@ -207,10 +211,9 @@ Resubmit with different version (makes it easier to track how many are).
 ## # A tibble: 2 x 2
 ##   new     time
 ##   &lt;chr&gt;  &lt;dbl&gt;
-## 1 New       80
+## 1 New       81
 ## 2 Update     5
 ```
-
 
 
 
@@ -225,9 +228,9 @@ Resubmit with different version (makes it easier to track how many are).
 
 
 
-&lt;img src="index_files/figure-html/users-plots-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/users-plots-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
-Some users help with many reviews.
+.center[Some users help with many reviews.]
 
 ???
 
@@ -242,9 +245,11 @@ Omitted bots bioc-issue-bot and ropensci-review-bot (new March 2021).
 
 # Comments
 
-&lt;img src="index_files/figure-html/comments-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/comments-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
+.center[
 A dialog between authors and reviewers &amp; editors. 
+]
 
 ???
 
@@ -254,9 +259,9 @@ Non reviewers users on bioconductor still chime in to help.
 
 # Bot role
 
-&lt;img src="index_files/figure-html/bioc-issue-bot-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/bioc-issue-bot-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
-Bot helps on the process and changes with the process
+.center[Bot helps on the process and changes with the process]
 
 ???
 
@@ -268,9 +273,9 @@ rOpenSci is going to have a bot too [ropensci-review-bot](https://github.com/rop
 
 # Labels
 
-&lt;img src="index_files/figure-html/labels-1.png" width="504" style="display: block; margin: auto;" /&gt;
+&lt;img src="index_files/figure-html/labels-1.png" width="792" style="display: block; margin: auto;" /&gt;
 
-Labels are used to indicate progress on the submission.
+.center[Labels are used to indicate progress on the submission.]
 
 ???
 
@@ -280,6 +285,49 @@ rOpenSci provides more detailed questioning for scope of a package.
 ---
 
 # Success submissions
+
+&lt;img src="index_files/figure-html/cran_success-1.png" width="792" style="display: block; margin: auto;" /&gt;
+
+.center[
+
+Bioconductor: 1 month,  rOpenSci: around 2 months
+
+]
+
+???
+
+
+```
+## # A tibble: 18 x 6
+##    submission_n Accepted     n   perc suspended perc_suspended
+##    &lt;fct&gt;        &lt;lgl&gt;    &lt;int&gt;  &lt;dbl&gt;     &lt;dbl&gt;          &lt;dbl&gt;
+##  1 1            FALSE      579   9.38       579         70.2  
+##  2 1            TRUE      5594  90.6          0          0    
+##  3 2            FALSE      168   7.34       168         20.4  
+##  4 2            TRUE      2120  92.7          0          0    
+##  5 3            FALSE       48   5.08        48          5.82 
+##  6 3            TRUE       897  94.9          0          0    
+##  7 4            FALSE       17   3.99        17          2.06 
+##  8 4            TRUE       409  96.0          0          0    
+##  9 5            FALSE        6   3.12         6          0.727
+## 10 5            TRUE       186  96.9          0          0    
+## 11 6            FALSE        5   4.90         5          0.606
+## 12 6            TRUE        97  95.1          0          0    
+## 13 7            TRUE        46 100            0          0    
+## 14 8            TRUE        25 100            0          0    
+## 15 9            FALSE        1   6.67         1          0.121
+## 16 9            TRUE        14  93.3          0          0    
+## 17 10           FALSE        1  16.7          1          0.121
+## 18 10           TRUE         5  83.3          0          0
+```
+
+```
+## # A tibble: 2 x 3
+##   Approved     n  perc
+##   &lt;chr&gt;    &lt;int&gt; &lt;dbl&gt;
+## 1 No         983 0.474
+## 2 Yes       1092 0.526
+```
 
 
 
@@ -298,41 +346,48 @@ rOpenSci provides more detailed questioning for scope of a package.
 |5/awaiting-reviewer(s)-response |        17.1|       55.1|
 |6/approved                      |        12.7|       67.8|
 
-.center[
-
-Bioconductor: 1 month,  rOpenSci: around 2 months
-
-]
-
-???
-
 CRAN: 80h
 Bioconductor: most of them in 1 month
 rOpenSci: in 2 months (seeking 2 reviewers and posting them).
 
-
-
 ---
 
-# Submit ?
+# Submit!
 
-- Prepare
+1. Prepare
+ 
+  Manual to [create R packages](https://cran.r-project.org/doc/manuals/r-release/R-exts.html#Creating-R-packages), [R Packages](https://r-pkgs.org/)
+  Follow policies ([CRAN](https://cran.r-project.org/web/packages/policies.html)) and **guidelines** ([Bioconductor](https://www.bioconductor.org/developers/package-submission/), [rOpenSci](https://devguide.ropensci.org/)).
+
+2. **Check**
+
+  [Use Rhub](https://builder.r-hub.io/), [Github Actions](https://github.com/r-lib/actions)
   
-  Follow policies and guidelines: [CRAN](https://cran.r-project.org/web/packages/policies.html), [Bioconductor](https://www.bioconductor.org/developers/package-submission/), [rOpenSci](https://devguide.ropensci.org/).
+3. (Re)***Submit***
 
-- **Fix**
+???
 
-- Resubmit
+Follow the detailed guidelines from Bioconductor and rOpenSci.
+Fix any problem that you haven't detected previously (double check the policy on CRAN). 
+Resubmit
+
+--
 
 .center[
 
 # Thanks
-
 R core and CRAN team
 Bioconductor core, 
 rOpenSci editors and reviewers
 
 ]
+
+???
+
+Thank also the package authors (mainly tidyverse).
+Maëlle and Locke for the dashboard.
+
+--
 
 .center[
 
@@ -341,6 +396,7 @@ rOpenSci editors and reviewers
 ***Questions ?***
 
 ]
+Blog posts for [Bioconductor](https://llrs.dev/2020/07/bioconductor-submissions-reviews/), [rOpenSci](https://llrs.dev/2020/09/ropensci-submissions/), [CRAN](https://llrs.dev/2021/01/cran-review/). 
 
 ]
 
