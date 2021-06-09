@@ -107,7 +107,7 @@ cran_submissions <- cran_submissions %>%
          diff_time = if_else(is.na(diff_time), diff0, diff_time), # Fill NAs
          diff_v = version != lag(version),
          diff_v = ifelse(is.na(diff_v), TRUE, diff_v), # Fill NAs
-         near_t = near(diff_time, 1, tol = 24),
+         near_t = abs(diff_time) <= 24,
          resubmission = !near_t | diff_v, 
          resubmission = if_else(resubmission == FALSE & diff_time == 0, 
                                TRUE, resubmission),
