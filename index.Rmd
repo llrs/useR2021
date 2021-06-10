@@ -6,7 +6,7 @@ author: '[Lluís Revilla](https://llrs.dev) <br>
  [`r icons::fontawesome("twitter")`Lluis_Revilla](https://twitter.com/Lluis_Revilla) '
 output:
   xaringan::moon_reader:
-    css: ["useR", "useR-fonts"]
+    css: ["useR", "useR-fonts", "css/custom_from_default.css"]
     nature:
       ratio: 16:9
       highlightStyle: github
@@ -127,9 +127,10 @@ To work with this slides use xaringan::infinite_moon_reader()
 
 ---
 
+class: center
+
 # Project differences
 
-.center[
 
 ```{r diff_proj}
 objective <- c("Publication quality and non-trivial",
@@ -161,9 +162,7 @@ rownames(df) <- repos
 knitr::kable(t(df), otuput = "html", align = "c")
 ```
 
-Different setup, different review.
-
-]
+.middle[Different setup, different review.]
 
 ???
 
@@ -211,6 +210,7 @@ cran_submissions + bioc_submission + ros_submissions &
   theme(axis.text.x = element_blank(),
         panel.grid.major.x = element_blank())
 ```
+
 
 .center[
 CRAN data thanks to the [incoming dashboard](https://lockedata.github.io/cransays/articles/dashboard.html).
@@ -893,10 +893,12 @@ ros_labels_plot <- ros_labels %>%
   labs(x = "Issue", y = element_blank(), title = "rOpenSci",
        fill = "Times")
 (bioc_labels_plot + ros_labels_plot) &
-  scale_fill_viridis_c() & guides(fill = FALSE)
+  scale_fill_viridis_c() &
+  guides(fill = FALSE)
 ```
 
-.center[Labels are used to indicate progress on the submission.]
+
+.bottom[ .center[ Labels are used to indicate progress on the submission. ] ]
 
 ???
 
@@ -958,11 +960,13 @@ success_dates <- ap0 %>%
                    expand = expansion()) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = c(0.2, 0.4)) +
-  labs(col = "Submission", title = "Acceptance rate", x = element_blank(), linetype = "Submission", y = element_blank())
+  labs(col = "Submission", title = "Acceptance rate", x = element_blank(),
+       linetype = "Submission", y = element_blank())
+	
 success_submissions + success_dates
 ```
 
-.center[High approval rates!!]
+.bottom[.center[High approval rates!!]]
 
 ???
 
@@ -1039,7 +1043,7 @@ Follow the detailed guidelines from Bioconductor and rOpenSci.
 Fix any problem that you haven't detected previously (double check the policy on CRAN). 
 Resubmit
 
---
+---
 
 .center[
 # Thanks
@@ -1055,13 +1059,12 @@ Thank also the package authors (mainly tidyverse).
 Maëlle and Locke for the dashboard.
 
 --
+
+.center[***Questions ?***]
+
 .bottom[
 
 .center[
-
-
-***Questions ?***
-
 
 Blog posts for [Bioconductor](https://llrs.dev/2020/07/bioconductor-submissions-reviews/), [rOpenSci](https://llrs.dev/2020/09/ropensci-submissions/), [CRAN](https://llrs.dev/2021/01/cran-review/). 
 
