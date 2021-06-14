@@ -47,10 +47,10 @@ meta() %>%
       "Presented at useR!2021."
     ),
     url = "https://user2021.llrs.dev",
-    image = "https://user2021.llrs.dev/index_files/figure-html/title-plot-1.png",
+    image = "https://user2021.llrs.dev/index_files/figure-html/title-slide_screenshot.png",
     image_alt = paste(
-      "Image with submissions to CRAN for Reviewing packages; how does it work?", 
-      "Horizontal axis the date, vertical axis the submissions on CRAN each line is a package on the submission queue. It shows a continuous increase on packages submitted (except some pauses).", 
+      "Image of the first slide for Reviewing packages; how does it work?", 
+      "On the background a plot with the submissions to CRAN, horizontal axis the date, vertical axis the submissions on CRAN each line is a package on the submission queue. It shows a continuous increase on packages submitted (except some pauses).", 
       "Presented at useR!2021 by Lluís Revilla"
     ),
     og_type = "website",
