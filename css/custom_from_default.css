@@ -3,3 +3,21 @@
   /* border-top: 1px solid #666; */
   /* border-bottom: 1px solid #666; */
 }
+.remark-slide table thead th { border-bottom: 1px solid #ddd; }
+
+/*https://stackoverflow.com/a/4760091/2886003*/
+tr:nth-child(odd)   { background-color: #eeeeee; }
+tr:nth-child(even)    { background-color: #ffffff; }
+
+th {background-color: #ffffff; font-weight: bold; }
+tr {background-color: #ffffff; }
+
+.tip-submission {
+  border: solid 1px #000000;
+  border-radius: 25px;
+  background-color: #CCE2CB;
+  margin: 5px;
+  padding; 5px;
+  width: 100%;
+  height: 90%;  
+}
