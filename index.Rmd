@@ -419,6 +419,27 @@ p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 Median time on submissions ~`r median(rsubm$time, na.rm = TRUE)` hours, mean time ~`r mean(rsubm$time, na.rm = TRUE)` hours.
 `r summary(rsubm$time)`
 
+
+```{r title-plot, include=FALSE}
+lv <- levels(fct_reorder(rsubm$package, rsubm$start, .fun = min, .desc = FALSE))
+ggplot(rsubm) +
+  geom_linerange(aes(y = fct_reorder(package, start, .fun = min, .desc = FALSE),
+                      x = start, xmin = start, xmax = end, 
+                     col = as.factor(submission_n))) + 
+  labs(x = element_blank(), y = element_blank(), title = element_blank(),
+         col = "Submissions") +
+  guides(col = FALSE) +
+  scale_x_datetime(date_breaks = "1 month", 
+                   expand = expansion(add = 2)) +
+  scale_colour_viridis_d() +
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = c(0.15, 0.7))
+```
+
 ---
 
 # Review speed 
@@ -705,7 +726,8 @@ man_col_v <- c("#440154FF", "#FF0000")
     scale_color_manual(values = man_col_v) +
     guides(col = FALSE, shape = FALSE) &
     scale_x_continuous(trans = "log10") &
-   scale_size(limits = c(1, 50), breaks = c(1, 10, 20, 30, 40, 50))) +
+   scale_size(limits = c(1, 50), breaks = c(1, 10, 20, 30, 40, 50),
+              range = c(4, 4+6-1))) +
   plot_layout(guides = "collect")
 ```
 
@@ -732,7 +754,8 @@ bioc_author_reviewer_comments <- bioc_by_issue %>%
   # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
   filter(!(author_comments == 0 & reviewer_comments == 0)) %>% 
   ggplot() +
-  geom_count(aes(author_comments, reviewer_comments), shape = 17) +
+  geom_count(aes(author_comments, reviewer_comments), shape = 17, 
+             col = "#87b13f") +
   labs(size = "Bioconductor", x = "Authors", title = "Reviewers", y = element_blank())
 
 bioc_auth_other_comments <- bioc_by_issue %>% 
@@ -741,7 +764,8 @@ bioc_auth_other_comments <- bioc_by_issue %>%
   # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
   filter(!(author_comments == 0 & reviewer_comments == 0)) %>% 
   ggplot() +
-  geom_count(aes(author_comments, comments - reviewer_comments - bot_comments - author_comments), shape = 17) +
+  geom_count(aes(author_comments, comments - reviewer_comments - bot_comments - author_comments), shape = 17,
+             col = "#87b13f") +
   labs(size = "Bioconductor", x = "Authors", title = "Other", y = element_blank())
 
 ros_author_editor_comments <- ros_by_issue %>% 
@@ -750,7 +774,8 @@ ros_author_editor_comments <- ros_by_issue %>%
   # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
   filter(!(author_comments == 0 & editor_comments == 0)) %>% 
   ggplot() +
-  geom_count(aes(author_comments, editor_comments)) +
+  geom_count(aes(author_comments, editor_comments), col = "#73ADF2") +
+  scale_size(limits = c(1, 30)) +
   labs(size = "rOpenSci", x = "Authors", title = "Editors", y = element_blank())
 
 ros_auth_other_comments <- ros_by_issue %>% 
@@ -759,14 +784,12 @@ ros_auth_other_comments <- ros_by_issue %>%
   # pivot_longer(reviewer_comments:bot_comments, names_to = "source") %>% 
   filter(!(author_comments == 0 & editor_comments == 0)) %>% 
   ggplot() +
-  geom_count(aes(author_comments, comments - editor_comments - bot_comments - author_comments)) +
+  geom_count(aes(author_comments, comments - editor_comments - bot_comments - author_comments), col = "#73ADF2") +
+  scale_size(limits = c(1, 30)) +
   labs(size = "rOpenSci", x = "Authors", title = "Reviewers & other", y = element_blank())
 
-((bioc_author_reviewer_comments 
-    + ros_author_editor_comments) /
-  ( bioc_auth_other_comments + ros_auth_other_comments) & 
-    scale_size(limits = c(1, 60))) +
-  plot_layout(guides = "collect")
+((bioc_author_reviewer_comments / bioc_auth_other_comments) & theme(legend.position = "left") & plot_layout(guides = "collect", ncol = 1))  |
+(ros_author_editor_comments + ros_auth_other_comments + plot_layout(guides = "collect", ncol = 1))
 ```
 
 .center[

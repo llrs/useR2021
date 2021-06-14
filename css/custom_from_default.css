@@ -5,6 +5,13 @@
 }
 .remark-slide table thead th { border-bottom: 1px solid #ddd; }
 
+/* https://bookdown.org/yihui/rmarkdown/xaringan-format.html#slides-and-properties */
+
+.title-slide {
+  background-image: url(https://user2021.llrs.dev/index_files/figure-html/title-plot-1.png);
+  background-position: top;
+}
+
 /*https://stackoverflow.com/a/4760091/2886003*/
 tr:nth-child(odd)   { background-color: #eeeeee; }
 tr:nth-child(even)    { background-color: #ffffff; }
