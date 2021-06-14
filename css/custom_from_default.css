@@ -9,7 +9,7 @@
 
 .title-slide {
   background-image: 
-    url("https://www.dropbox.com/s/ff7nr4n2dcm59de/useR_logo.png?dl=1"), 
+    url(../index_files/figure-html/useR_logo.png), 
     url(../index_files/figure-html/title-plot-1.png), 
     linear-gradient(to bottom, white 85%, rgba(227, 227, 227) 95%);
   background-position: 
