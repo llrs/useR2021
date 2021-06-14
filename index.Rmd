@@ -47,10 +47,10 @@ meta() %>%
       "Presented at useR!2021."
     ),
     url = "https://user2021.llrs.dev",
-    image = "https://llrs.dev/2020/07/bioconductor-submissions-reviews/index_files/figure-html/first_plot-1.png",
+    image = "https://user2021.llrs.dev/index_files/figure-html/title-plot-1.png",
     image_alt = paste(
-      "Image from a blog https://llrs.dev/2020/07/bioconductor-submissions-reviews/ for Reviewing packages; how does it work?", 
-      "Horizontal axis the date, vertical axis the submissions on Bioconductor each point is an event on a submission. It shows a continuous increase on packages submitted.", 
+      "Image with submissions to CRAN for Reviewing packages; how does it work?", 
+      "Horizontal axis the date, vertical axis the submissions on CRAN each line is a package on the submission queue. It shows a continuous increase on packages submitted (except some pauses).", 
       "Presented at useR!2021 by Lluís Revilla"
     ),
     og_type = "website",
@@ -788,8 +788,11 @@ ros_auth_other_comments <- ros_by_issue %>%
   scale_size(limits = c(1, 30)) +
   labs(size = "rOpenSci", x = "Authors", title = "Reviewers & other", y = element_blank())
 
-((bioc_author_reviewer_comments / bioc_auth_other_comments) & theme(legend.position = "left") & plot_layout(guides = "collect", ncol = 1))  |
-(ros_author_editor_comments + ros_auth_other_comments + plot_layout(guides = "collect", ncol = 1))
+((bioc_author_reviewer_comments 
+  + ros_author_editor_comments) /
+    ( bioc_auth_other_comments + ros_auth_other_comments) & 
+    scale_size(limits = c(1, 60), range = c(2, 7))) +
+    plot_layout(guides = "collect")
 ```
 
 .center[
@@ -991,7 +994,7 @@ success_dates <- ap0 %>%
   ggplot() + 
   geom_smooth(aes(submission, perc, linetype = new), span = 0.5) +
   scale_y_continuous(expand = expansion(), labels = scales::percent) +
-  scale_x_datetime(date_labels = "%y/%m", breaks = fdates, 
+  scale_x_datetime(date_labels = "%y/%m", date_breaks = "1 month", 
                    expand = expansion()) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = c(0.2, 0.4)) +
