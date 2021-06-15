@@ -5,6 +5,13 @@
 }
 .remark-slide table thead th { border-bottom: 1px solid #ddd; }
 
+.remark-slide-content {
+  background-image: url(../index_files/figure-html/useR_logo.png), linear-gradient(to bottom, white 85%, rgba(227, 227, 227) 95%) ;
+  background-position: 20px 590px , center;
+  background-size: 85px , 100% 100%, cover ;
+}
+
+
 /* https://bookdown.org/yihui/rmarkdown/xaringan-format.html#slides-and-properties */
 
 .title-slide {
