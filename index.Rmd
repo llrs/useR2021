@@ -129,7 +129,7 @@ objective <- c("Publication quality and non-trivial",
                "Drive the adoption of best practices with useful, transparent and constructive feedback")
 upload <- c("tar.gz file", "fill an issue", "fill an issue")
 setup <- c("None", "ssh key, subscribe mailing", "CI tests")
-checks <- c("check --as-cran", "check; Biocheck", "check --as-cran")
+checks <- c("check --as-cran", "check; BiocCheck", "check --as-cran")
 os <- rep("Windows, Unix, iOS", 3)
 R_versions <- c("oldrel, release, patched, devel", "release, devel", "oldrel, release, devel")
 cycle <- c("Always open", "2 annual releases", "Always open")
