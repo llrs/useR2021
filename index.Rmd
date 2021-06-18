@@ -304,12 +304,13 @@ cran_times <- cran %>%
          week = week(snapshot_time),
          mday = mday(snapshot_time),
          wday = wday(snapshot_time, locale = "en_GB.UTF-8", 
-                     week_start = getOption("lubridate.week.start", 1),
+                     week_start = 1,
                      label = FALSE))
 
-lab_names <- lubridate::wday(1:7, locale = "en_GB.UTF-8", label = TRUE,
+d <- c(1:7)
+lab_names <- lubridate::wday(d, locale = "en_GB.UTF-8", label = TRUE,
                      week_start =  1)
-names(lab_names) <- as.character(1:7)
+names(lab_names) <- as.character(d)
 
 dmonth_breaks <- seq(0, 31, by = 7)
 dmonth_breaks[1] <- 1
@@ -337,7 +338,7 @@ cran_dweek <- cran_times %>%
   group_by(folder, date, wday) %>% 
   summarize(packages = n_distinct(package),
             week = unique(week)) %>% 
-  group_by(folder, wday) %>% 
+  ungroup() %>% 
   ggplot() +
   geom_smooth(aes(wday, packages, col = folder, linetype = folder)) +
   labs(x = "Day of week", y = "Packages", col = "Folder", 
