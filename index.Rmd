@@ -160,8 +160,8 @@ knitr::kable(t(df), align = "c")
 
 The different projects/archives have different setups.
 *Read the table*
-Will use data from the three projects but mostly refer to CRAN.
 All of them first you need to pass the automatic checks in place before a human looks into it.
+Will use data from the three projects but mostly refer to CRAN.
 
 ---
 name:submissions
@@ -418,8 +418,8 @@ p1 + inset_element(p2, 0.2, 0.2, 1, 1)
 
 ???
 
-Median time on submissions ~`r median(rsubm$time, na.rm = TRUE)` hours, mean time ~`r mean(rsubm$time, na.rm = TRUE)` hours.
-`r summary(rsubm$time)`
+Median time on submissions ~`r median(rsubm$h, na.rm = TRUE)` hours, mean time ~`r mean(rsubm$h, na.rm = TRUE)` hours.
+`r summary(rsubm$h)`
 
 
 ```{r title-plot, include=FALSE}
@@ -1123,6 +1123,6 @@ Some answers on [Lluís's blog](https://llrs.dev/post/) posts: [Bioconductor](ht
 
 ???
 
-Thank also to the package authors (mainly tidyverse, ggplot2 and rhub, p gh).
-Maëlle and Locke for the dashboard.
+Thank also to the package authors (mainly tidyverse, ggplot2 and rhub, and gh).
+Maëlle Salmon and Stephanie Locke for the dashboard.
 rOpenSci review: [Video](https://www.youtube.com/watch?v=iJnn_9xKkqk)
