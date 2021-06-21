@@ -62,6 +62,7 @@ meta() %>%
 
 
 ```{r init}
+xaringanExtra::use_webcam()
 ros <- readRDS("output/github_rOpenSci_data__cleaned.RDS")
 cran <- readRDS("output/CRAN_data_cleaned.RDS")
 bioc <- readRDS("output/submissions_bioconductor.RDS")
@@ -666,8 +667,8 @@ bioc_users_plot <- bioc_by_user %>%
   ggplot() + 
   geom_abline(slope = 1, intercept = 0, alpha = 0.5, col = "gray") +
   geom_count(aes(issues_participated, actions, col = is_reviewer, shape = is_reviewer)) +
-  labs(size = "Users", col = "Reviewer?", y = "Actions", 
-       x = "Issues", shape = "Reviewer?",
+  labs(size = "Users", col = "Reviewer/Editor?", y = "Actions", 
+       x = "Issues", shape = "Reviewer/Editor?",
        title = "Bioconductor")
 ```
 
