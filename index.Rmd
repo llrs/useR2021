@@ -1,5 +1,5 @@
 ---
-title: "Reviewing packages; how does it work?"
+title: "Packages submission and reviews; how does it work?"
 author: '[Lluís Revilla](https://llrs.dev) <br>
  [`r icons::fontawesome("square", "regular")`](https://user2021.llrs.dev) 
   [`r icons::fontawesome("github")`](https://github.com/llrs/user2021/) 
